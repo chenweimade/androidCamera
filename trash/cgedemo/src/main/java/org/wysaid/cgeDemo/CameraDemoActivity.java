@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.RectF;
 import android.hardware.Camera;
 import android.support.v4.app.ActivityCompat;
@@ -15,9 +16,12 @@ import android.view.MenuItem;
 
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.SeekBar;
 
 import org.wysaid.camera.CameraInstance;
@@ -27,6 +31,9 @@ import org.wysaid.myUtils.MsgUtil;
 import org.wysaid.nativePort.CGEFrameRecorder;
 import org.wysaid.view.CameraRecordGLSurfaceView;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CameraDemoActivity extends Activity implements View.OnTouchListener {
 
     public static String lastVideoPathFileName = FileUtil.getPath() + "/lastVideoPath.txt";
@@ -35,6 +42,11 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
 
     private CameraRecordGLSurfaceView mCameraView;
     private ImageView mThunbnailView;
+    private HorizontalScrollView  mHorizontalScrollView;
+    private int filterIdx = 0;
+    private int filterScrollStep = 50;
+
+
 
     public final static String LOG_TAG = CameraRecordGLSurfaceView.LOG_TAG;
 
@@ -126,6 +138,7 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
         mCameraView = (CameraRecordGLSurfaceView)findViewById(R.id.myGLSurfaceView);
         mCameraView.presetCameraForward(false);
 
+        mHorizontalScrollView = (HorizontalScrollView) findViewById(R.id.filters_scroll_view);
         SeekBar seekBar = (SeekBar) findViewById(R.id.seekBar);
         mThunbnailView = (ImageView)findViewById(R.id.imagePreview);
 
@@ -178,7 +191,9 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
             if(i == 0)
                 button.setText("None");
             else
-                button.setText("Filter" + i);
+                button.setText("F" + i);
+
+            button.setTag("F" + i);
             button.setOnClickListener(mFilterSwitchListener);
             layout.addView(button);
         }
@@ -377,6 +392,10 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
 
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN: {
+                        mPosX[0] = event.getX();
+                        mPosY[0] = event.getY();
+
+                        //todo code may need move
                         Log.i(LOG_TAG, String.format("Tap to focus: %g, %g", event.getX(), event.getY()));
                         final float focusX = event.getX() / mCameraView.getWidth();
                         final float focusY = event.getY() / mCameraView.getHeight();
@@ -392,8 +411,7 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
                                 }
                             }
                         });
-                        mPosX[0] = event.getX();
-                        mPosY[0] = event.getY();
+
                     }
                     break;
 
@@ -404,15 +422,36 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
                     }
                     break;
                     case MotionEvent.ACTION_UP: {
+                        Button viewOld = (Button) mHorizontalScrollView.findViewWithTag("F"+filterIdx);
+                        viewOld.setTextColor(Color.WHITE);
                         if (mCurPosX[0] - mPosX[0] > 0
                                 && (Math.abs(mCurPosX[0] - mPosX[0]) > 25)) {
-                            System.out.println("right");
+                            if(filterIdx != MainActivity.effectConfigs.length){//filter count
+                                filterIdx++;
+                                mHorizontalScrollView.scrollBy(filterScrollStep, 0);
+                                MyButtons btn = (MyButtons) mHorizontalScrollView.findViewWithTag("F"+filterIdx);
+                                btn.setTextColor(Color.RED);
+
+                                mCameraView.setFilterWithConfig(btn.filterConfig);
+                                mCurrentConfig = btn.filterConfig;
+                            }
+                            System.out.println("right " + filterIdx);
 
                         } else if (mCurPosX[0] - mPosX[0] < 0
                                 && (Math.abs(mCurPosX[0] - mPosX[0]) > 25)) {
-                            System.out.println("left");
+                            if(filterIdx!=0){
+                                filterIdx--;
+                                mHorizontalScrollView.scrollBy(filterScrollStep, 0);
+                                MyButtons btn = (MyButtons) mHorizontalScrollView.findViewWithTag("F"+filterIdx);
+                                btn.setTextColor(Color.RED);
+
+                                mCameraView.setFilterWithConfig(btn.filterConfig);
+                                mCurrentConfig = btn.filterConfig;
+                            }
+                            System.out.println("left" + filterIdx);
 
                         }
+
                     }
                     break;
 

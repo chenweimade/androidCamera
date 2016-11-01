@@ -70,10 +70,10 @@
     </LinearLayout>
     </FrameLayout>
     <HorizontalScrollView
+        android:id="@+id/filters_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:layout_alignParentBottom="true">
+        android:layout_alignParentTop="true">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="50dp"
@@ -85,10 +85,13 @@
                 android:layout_height="match_parent"
                 android:id="@+id/takePicBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
                 android:text="TakePicture"/>
 
             <Button
                 android:layout_width="100dp"
+                android:visibility="gone"
+
                 android:layout_height="match_parent"
                 android:id="@+id/takeShotBtn"
                 android:textAllCaps="false"
@@ -99,6 +102,8 @@
                 android:layout_height="match_parent"
                 android:id="@+id/thunbnailBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="ExtraView"/>
 
             <Button
@@ -106,6 +111,8 @@
                 android:layout_height="match_parent"
                 android:id="@+id/pauseBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="Pause"/>
 
             <Button
@@ -113,6 +120,8 @@
                 android:layout_height="match_parent"
                 android:id="@+id/resumeBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="Resume"/>
 
             <Button
@@ -120,6 +129,8 @@
                 android:layout_height="match_parent"
                 android:id="@+id/switchCameraBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="Switch"/>
 
             <Button
@@ -127,6 +138,8 @@
                 android:layout_height="match_parent"
                 android:id="@+id/recordBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="Record"/>
 
             <Button
@@ -134,12 +147,16 @@
                 android:layout_height="match_parent"
                 android:id="@+id/flashBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="Flash"/>
 
             <Button
                 android:layout_width="100dp"
                 android:layout_height="match_parent"
                 android:id="@+id/shapeBtn"
+                android:visibility="gone"
+
                 android:textAllCaps="false"
                 android:text="Style"/>
 
@@ -148,12 +165,16 @@
                 android:layout_height="match_parent"
                 android:id="@+id/backgroundBtn"
                 android:textAllCaps="false"
+                android:visibility="gone"
+
                 android:text="Background"/>
 
             <Button
                 android:layout_width="100dp"
                 android:layout_height="match_parent"
                 android:id="@+id/fitViewBtn"
+                android:visibility="gone"
+
                 android:textAllCaps="false"
                 android:text="fitScreen"/>
 
