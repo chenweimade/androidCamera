@@ -1,10 +1,12 @@
 package org.wysaid.cgeDemo;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.RectF;
 import android.hardware.Camera;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -25,7 +27,7 @@ import org.wysaid.myUtils.MsgUtil;
 import org.wysaid.nativePort.CGEFrameRecorder;
 import org.wysaid.view.CameraRecordGLSurfaceView;
 
-public class CameraDemoActivity extends ActionBarActivity {
+public class CameraDemoActivity extends Activity implements View.OnTouchListener {
 
     public static String lastVideoPathFileName = FileUtil.getPath() + "/lastVideoPath.txt";
 
@@ -45,10 +47,17 @@ public class CameraDemoActivity extends ActionBarActivity {
         mCameraView.post(new Runnable() {
             @Override
             public void run() {
-                MsgUtil.toastMsg(CameraDemoActivity.this, s);
+                MsgUtil.toastMsg(getApplication(), s);
             }
         });
     }
+
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        return false;
+    }
+
+
 
     public static class MyButtons extends Button {
 
@@ -358,6 +367,10 @@ public class CameraDemoActivity extends ActionBarActivity {
             }
         });
 
+        final float[] mPosX = new float[1];
+        final float[] mPosY = new float[1];
+        final float[] mCurPosX = new float[1];
+        final float[] mCurPosY = new float[1];
         mCameraView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, final MotionEvent event) {
@@ -379,8 +392,30 @@ public class CameraDemoActivity extends ActionBarActivity {
                                 }
                             }
                         });
+                        mPosX[0] = event.getX();
+                        mPosY[0] = event.getY();
                     }
                     break;
+
+                    case MotionEvent.ACTION_MOVE: {
+                        mCurPosX[0] = event.getX();
+                        mCurPosY[0] = event.getY();
+
+                    }
+                    break;
+                    case MotionEvent.ACTION_UP: {
+                        if (mCurPosX[0] - mPosX[0] > 0
+                                && (Math.abs(mCurPosX[0] - mPosX[0]) > 25)) {
+                            System.out.println("right");
+
+                        } else if (mCurPosX[0] - mPosX[0] < 0
+                                && (Math.abs(mCurPosX[0] - mPosX[0]) > 25)) {
+                            System.out.println("left");
+
+                        }
+                    }
+                    break;
+
                     default:
                         break;
                 }
