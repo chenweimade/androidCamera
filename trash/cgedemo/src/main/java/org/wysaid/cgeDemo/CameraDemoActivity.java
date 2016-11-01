@@ -116,6 +116,7 @@ public class CameraDemoActivity extends ActionBarActivity {
         Button recordBtn = (Button) findViewById(R.id.recordBtn);
         mCameraView = (CameraRecordGLSurfaceView)findViewById(R.id.myGLSurfaceView);
         mCameraView.presetCameraForward(false);
+
         SeekBar seekBar = (SeekBar) findViewById(R.id.seekBar);
         mThunbnailView = (ImageView)findViewById(R.id.imagePreview);
 
@@ -249,7 +250,7 @@ public class CameraDemoActivity extends ActionBarActivity {
             }
         });
 
-        mCameraView.presetRecordingSize(480, 640);
+        mCameraView.presetRecordingSize(640, 480);
 //        mCameraView.presetRecordingSize(720, 1280);
         mCameraView.setZOrderOnTop(false);
         mCameraView.setZOrderMediaOverlay(true);

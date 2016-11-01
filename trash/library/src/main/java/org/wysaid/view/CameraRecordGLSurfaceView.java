@@ -40,6 +40,7 @@ public class CameraRecordGLSurfaceView extends CameraGLSurfaceView {
         void startRecordingOver(boolean success);
     }
 
+
     public void startRecording(final String filename){
         startRecording(filename, null);
     }
