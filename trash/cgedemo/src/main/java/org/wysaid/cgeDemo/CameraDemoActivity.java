@@ -2,6 +2,7 @@ package org.wysaid.cgeDemo;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -30,6 +31,7 @@ import org.wysaid.myUtils.ImageUtil;
 import org.wysaid.myUtils.MsgUtil;
 import org.wysaid.nativePort.CGEFrameRecorder;
 import org.wysaid.view.CameraRecordGLSurfaceView;
+import org.wysaid.view.VideoPlayerGLSurfaceView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -94,7 +96,7 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
             {
                 btn.setText("正在录制");
                 Log.i(LOG_TAG, "Start recording...");
-                mCameraView.setClearColor(1.0f, 0.0f, 0.0f, 0.3f);
+                //mCameraView.setClearColor(1.0f, 0.0f, 0.0f, 0.3f);
                 recordFilename = ImageUtil.getPath() + "/rec_" + System.currentTimeMillis() + ".mp4";
 //                recordFilename = ImageUtil.getPath(CameraDemoActivity.this, false) + "/rec_1.mp4";
                 mCameraView.startRecording(recordFilename, new CameraRecordGLSurfaceView.StartRecordingCallback() {
@@ -114,11 +116,14 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
                 showText("录制完毕， 存储为 " + recordFilename);
                 btn.setText("录制完毕");
                 Log.i(LOG_TAG, "End recording...");
-                mCameraView.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+                //mCameraView.setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
                 mCameraView.endRecording(new CameraRecordGLSurfaceView.EndRecordingCallback() {
                     @Override
                     public void endRecordingOK() {
                         Log.i(LOG_TAG, "End recording OK");
+                        //start 编辑 video
+                        startActivity(new Intent(CameraDemoActivity.this, VideoEditorActivity.class));
+
                     }
                 });
             }
@@ -134,7 +139,7 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
 //        lastVideoPathFileName = FileUtil.getPathInPackage(CameraDemoActivity.this, true) + "/lastVideoPath.txt";
         Button takePicBtn = (Button) findViewById(R.id.takePicBtn);
         Button takeShotBtn = (Button) findViewById(R.id.takeShotBtn);
-        Button recordBtn = (Button) findViewById(R.id.recordBtn);
+        Button recordBtn = (Button) findViewById(R.id.btn_camera_shutter);
         mCameraView = (CameraRecordGLSurfaceView)findViewById(R.id.myGLSurfaceView);
         mCameraView.presetCameraForward(false);
 

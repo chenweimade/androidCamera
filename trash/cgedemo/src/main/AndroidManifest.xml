@@ -48,6 +48,8 @@
         <activity android:name=".VideoPlayerDemoActivity" />
         <activity android:name=".FaceDemoActivity" />
         <activity android:name=".TestCaseActivity" />
+        <activity android:name=".VideoEditorActivity" />
+
     </application>
 
 </manifest>
