@@ -1,1 +1,1 @@
-include ':library', ':cgedemo'
+include ':library', ':cgedemo', ':collage-views'

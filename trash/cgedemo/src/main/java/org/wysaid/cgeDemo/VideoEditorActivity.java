@@ -2,8 +2,7 @@ package org.wysaid.cgeDemo;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,21 +12,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.SeekBar;
 
+import com.thuytrinh.android.collageviews.MultiTouchListener;
+
+import org.wysaid.animation.CollageView;
 import org.wysaid.common.Common;
 import org.wysaid.myUtils.FileUtil;
-import org.wysaid.myUtils.ImageUtil;
 import org.wysaid.myUtils.MsgUtil;
-import org.wysaid.nativePort.CGEFrameRenderer;
-import org.wysaid.texUtils.TextureRenderer;
-import org.wysaid.texUtils.TextureRendererDrawOrigin;
-import org.wysaid.texUtils.TextureRendererEdge;
-import org.wysaid.texUtils.TextureRendererEmboss;
-import org.wysaid.texUtils.TextureRendererLerpBlur;
-import org.wysaid.texUtils.TextureRendererWave;
 import org.wysaid.view.VideoPlayerGLSurfaceView;
+
+import java.io.IOException;
+
+import pl.droidsonroids.gif.GifDrawable;
+
+import static android.R.attr.x;
 
 public class VideoEditorActivity extends AppCompatActivity {
 
@@ -36,9 +36,10 @@ public class VideoEditorActivity extends AppCompatActivity {
     Button mFiltersBtn;
     Button mAnination;
     Button mSubtitling;
-
-
+    FrameLayout mGlviewFrameLayout;
+    LinearLayout editLayer ;
     String mCurrentConfig;
+    CollageView collageView;
 
     public static final int REQUEST_CODE_PICK_VIDEO = 1;
 
@@ -91,13 +92,50 @@ public class VideoEditorActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_editor);
+
         mPlayerView = (VideoPlayerGLSurfaceView)findViewById(R.id.videoGLSurfaceView);
         mPlayerView.setZOrderOnTop(false);
         mPlayerView.setZOrderMediaOverlay(true);
+        mGlviewFrameLayout = (FrameLayout) findViewById(R.id.glviewFrameLayout);
 
         mEditingBtn = (Button)findViewById(R.id.editing);
         mAnination = (Button)findViewById(R.id.anination);
+        mAnination.setOnClickListener(new View.OnClickListener() {
+            private boolean useMask = false;
+            @Override
+            public void onClick(View v) {
+                useMask = !useMask;
+                if(useMask) {
+                    try {
+                        if(editLayer.findViewWithTag("xxx") == null){
+                            GifDrawable gifFromResource = new GifDrawable( getResources(), R.drawable.dragon_fire );
+                            collageView = new CollageView(getApplicationContext());
+                            collageView.setTag("xxxx");
+                            collageView.setVisibility(View.VISIBLE);
+                            //collageView.setImageResource(R.drawable.ic_camera_filter);
+                            collageView.setImageDrawable(gifFromResource);
+
+                            collageView.setOnTouchListener(new MultiTouchListener());
+                            editLayer.addView(collageView);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+
+                }
+            }
+        });
+
+
         mSubtitling = (Button)findViewById(R.id.subtitling);
+        mSubtitling.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+               Drawable x = collageView.getDrawable();
+                System.out.println("-----");
+            }
+        });
         mFiltersBtn = (Button)findViewById(R.id.filters);
         mFiltersBtn.setOnClickListener(new View.OnClickListener() {
             private int filterIndex;
@@ -114,6 +152,7 @@ public class VideoEditorActivity extends AppCompatActivity {
         });
 
 
+
         {
             String lastVideoFileName = FileUtil.getTextContent(CameraDemoActivity.lastVideoPathFileName);
             if(lastVideoFileName == null) {
@@ -127,6 +166,17 @@ public class VideoEditorActivity extends AppCompatActivity {
             mPlayerView.setVideoUri(lastVideoUri, new VideoPlayerGLSurfaceView.PlayPreparedCallback() {
                 @Override
                 public void playPrepared(MediaPlayer player) {
+                    Log.i(Common.LOG_TAG, String.format("View port: %d, %d, %d, %d", mPlayerView.getRenderViewX(), mPlayerView.getRenderViewY(), mPlayerView.getRenderViewHeight(), mPlayerView.getRenderViewWidth()));
+
+                    editLayer = new LinearLayout(getApplicationContext());
+                    editLayer.setTag("editLayer");
+                    //editLayer.setBackgroundColor(Color.BLUE);
+                    editLayer.setOrientation(LinearLayout.VERTICAL);
+                    editLayer.setLayoutParams(new LinearLayout.LayoutParams(mPlayerView.getViewWidth(),mPlayerView.getRenderViewHeight()));
+                    editLayer.setX(mPlayerView.getRenderViewX());
+                    editLayer.setY(mPlayerView.getRenderViewY());
+                    mGlviewFrameLayout.addView(editLayer);
+
                     Log.i(Common.LOG_TAG, "The video is prepared to play");
                     player.start();
                 }

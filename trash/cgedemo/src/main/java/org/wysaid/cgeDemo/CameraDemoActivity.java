@@ -190,6 +190,7 @@ public class CameraDemoActivity extends Activity implements View.OnTouchListener
 
         LinearLayout layout = (LinearLayout) findViewById(R.id.menuLinearLayout);
 
+
         for(int i = 0; i != MainActivity.effectConfigs.length; ++i) {
             MyButtons button = new MyButtons(this, MainActivity.effectConfigs[i]);
             button.setAllCaps(false);

@@ -44,9 +44,7 @@ public class TestCaseActivity extends AppCompatActivity {
         try {
             AssetManager am = getAssets();
             InputStream is;
-
             is = am.open("logo.png");
-
             bmp = BitmapFactory.decodeStream(is);
 
         } catch (IOException e) {

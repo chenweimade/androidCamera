@@ -9,8 +9,44 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := CGE
+IMAGE_MAGICK 	    := magick/
+JPEG_SRC_PATH 		:= jpeg-9b/
+PHYSFS_SRC_PATH 	:= physfs-2.0.2/
+PNG_SRC_PATH 		:= libpng-1.5.26/
+TIFF_SRC_PATH 		:= tiff-3.9.5/
+FREETYPE_SRC_PATH	:= freetype2-android/
+ZLIB_SRC_PATH	    := zlib128/
+WEBP_SRC_PATH	    := libwebp-0.3.1/
+JASPER_SRC_PATH	    := jasper-1.900.1/
 
-#*********************** CGE Library ****************************
+############################################################################################################################################################################################
+#libjpego
+include $(CLEAR_VARS)
+
+LOCAL_MODULE    := libjpego
+LOCAL_MODULE_FILENAME := libhello-jni
+
+LOCAL_C_INCLUDES  :=  ${JPEG_SRC_PATH}
+
+LOCAL_SRC_FILES := \
+        ${JPEG_SRC_PATH}jcapimin.c ${JPEG_SRC_PATH}jcapistd.c ${JPEG_SRC_PATH}jccoefct.c ${JPEG_SRC_PATH}jccolor.c ${JPEG_SRC_PATH}jcdctmgr.c ${JPEG_SRC_PATH}jchuff.c \
+        ${JPEG_SRC_PATH}jcinit.c ${JPEG_SRC_PATH}jcmainct.c ${JPEG_SRC_PATH}jcmarker.c ${JPEG_SRC_PATH}jcmaster.c ${JPEG_SRC_PATH}jcomapi.c ${JPEG_SRC_PATH}jcparam.c \
+        ${JPEG_SRC_PATH}jcprepct.c ${JPEG_SRC_PATH}jcsample.c ${JPEG_SRC_PATH}jctrans.c ${JPEG_SRC_PATH}jdapimin.c ${JPEG_SRC_PATH}jdapistd.c \
+        ${JPEG_SRC_PATH}jdatadst.c ${JPEG_SRC_PATH}jdatasrc.c ${JPEG_SRC_PATH}jdcoefct.c ${JPEG_SRC_PATH}jdcolor.c ${JPEG_SRC_PATH}jddctmgr.c ${JPEG_SRC_PATH}jdhuff.c \
+        ${JPEG_SRC_PATH}jdinput.c ${JPEG_SRC_PATH}jdmainct.c ${JPEG_SRC_PATH}jdmarker.c ${JPEG_SRC_PATH}jdmaster.c ${JPEG_SRC_PATH}jdmerge.c \
+        ${JPEG_SRC_PATH}jdpostct.c ${JPEG_SRC_PATH}jdsample.c ${JPEG_SRC_PATH}jdtrans.c ${JPEG_SRC_PATH}jerror.c ${JPEG_SRC_PATH}jfdctflt.c ${JPEG_SRC_PATH}jfdctfst.c \
+        ${JPEG_SRC_PATH}jfdctint.c ${JPEG_SRC_PATH}jidctflt.c ${JPEG_SRC_PATH}jidctfst.c ${JPEG_SRC_PATH}jidctint.c ${JPEG_SRC_PATH}jquant1.c \
+        ${JPEG_SRC_PATH}jquant2.c ${JPEG_SRC_PATH}jutils.c ${JPEG_SRC_PATH}jmemmgr.c ${JPEG_SRC_PATH}jcarith.c ${JPEG_SRC_PATH}jdarith.c ${JPEG_SRC_PATH}jaricom.c \
+        ${JPEG_SRC_PATH}jmemnobs.c
+
+
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)
+
+include $(BUILD_STATIC_LIBRARY)
+
+
+############################################################################################################################################################################################
+
 
 CGE_ROOT=$(LOCAL_PATH)
 
@@ -107,3 +143,8 @@ endif
 # Call user defined module
 include $(CLEAR_VARS)
 include $(CGE_ROOT)/source/source.mk
+
+###############################
+# magick
+include $(CLEAR_VARS)
+include $(CGE_ROOT)/magick/Android.mk

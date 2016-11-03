@@ -55,6 +55,22 @@ public class VideoPlayerGLSurfaceView extends GLSurfaceView implements GLSurface
         return mViewHeight;
     }
 
+    public int getRenderViewX() {
+        return mRenderViewport.x;
+    }
+
+    public int getRenderViewY() {
+        return mRenderViewport.y;
+    }
+
+    public int getRenderViewHeight() {
+        return mRenderViewport.height;
+    }
+
+    public int getRenderViewWidth() {
+        return mRenderViewport.width;
+    }
+
     private int mVideoWidth = 1000;
     private int mVideoHeight = 1000;
 
