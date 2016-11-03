@@ -31,7 +31,7 @@ android {
 
     sourceSets.main {
         jniLibs.srcDir 'src/main/libs' //set libs as .so's location instead of jni
-        jni.srcDirs = [] //disable automatic ndk-build call with auto-generated Android.mk file
+        jni.srcDirs = ['src/main/jni'] //disable automatic ndk-build call with auto-generated Android.mk file 'src/main/jni'
     }
 
 }
