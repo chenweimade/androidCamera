@@ -1,0 +1,11 @@
+{
+  "buildFiles": [
+    "/Users/wei/Documents/cy/trash/library/src/main/jni/Android.mk",
+    "/Users/wei/Documents/cy/trash/library/src/main/jni/Application.mk"
+  ],
+  "cleanCommands": [],
+  "libraries": {},
+  "toolchains": {},
+  "cFileExtensions": [],
+  "cppFileExtensions": []
+}

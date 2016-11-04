@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 
 import org.wysaid.common.Common;
+import org.wysaid.nativePort.CGEFFmpegNativeLibrary;
 import org.wysaid.nativePort.CGENativeLibrary;
 
 import java.io.IOException;
@@ -237,6 +238,7 @@ public class MainActivity extends ActionBarActivity {
 
         //第二个参数根据自身需要设置， 将作为 loadImage 第二个参数回传
         CGENativeLibrary.setLoadImageCallback(loadImageCallback, null);
+        CGEFFmpegNativeLibrary.tttt();
     }
 
 //    @Override

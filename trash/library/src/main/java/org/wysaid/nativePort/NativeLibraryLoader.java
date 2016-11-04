@@ -17,6 +17,7 @@ public class NativeLibraryLoader {
 //        try {
             System.loadLibrary("ffmpeg");
             System.loadLibrary("CGE");
+            System.loadLibrary("magick");
 
             //User defined mothods, not required. (including offscreen video rendering)
             System.loadLibrary("CGEExt");

@@ -11,7 +11,8 @@
 
 #include "cgeGLFunctions.h"
 #include "cgeUtilFunctions.h"
-
+#include <iostream>
+#include <Magick++.h>
 #include <jni.h>
 
 namespace CGE
@@ -26,6 +27,10 @@ extern "C" {
 
 JNIEXPORT jboolean JNICALL Java_org_wysaid_nativePort_CGEFFmpegNativeLibrary_nativeGenerateVideoWithFilter
   (JNIEnv *, jclass, jstring, jstring, jstring, jfloat, jobject, jint, jfloat, jboolean);
+
+JNIEXPORT jstring JNICALL Java_org_wysaid_nativePort_CGEFFmpegNativeLibrary_justTest
+    (JNIEnv *env,jobject /* this */,jstring abc,jfloat,jfloat);
+
 
 #ifdef __cplusplus
 }

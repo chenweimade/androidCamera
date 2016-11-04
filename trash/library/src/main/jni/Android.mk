@@ -5,15 +5,15 @@
 #
 LOCAL_PATH := $(call my-dir)
 
-IMAGE_MAGICK 	    := magickPlusPlus/
-JPEG_SRC_PATH 		:= jpeg-9b/
-PHYSFS_SRC_PATH 	:= physfs-2.0.2/
-PNG_SRC_PATH 		:= libpng-1.5.26/
-TIFF_SRC_PATH 		:= tiff-3.9.5/
-FREETYPE_SRC_PATH	:= freetype2-android/
-ZLIB_SRC_PATH	    := zlib-1.2.8/
-WEBP_SRC_PATH	    := libwebp-0.3.1/
-JASPER_SRC_PATH	    := jasper-1.900.1/
+IMAGE_MAGICK 	    := $(LOCAL_PATH)/magickPlusPlus/
+JPEG_SRC_PATH 		:= $(LOCAL_PATH)/jpeg-9b/
+PHYSFS_SRC_PATH 	:= $(LOCAL_PATH)/physfs-2.0.2/
+PNG_SRC_PATH 		:= $(LOCAL_PATH)/libpng-1.5.26/
+TIFF_SRC_PATH 		:= $(LOCAL_PATH)/tiff-3.9.5/
+FREETYPE_SRC_PATH	:= $(LOCAL_PATH)/freetype2-android/
+ZLIB_SRC_PATH	    := $(LOCAL_PATH)/zlib-1.2.8/
+WEBP_SRC_PATH	    := $(LOCAL_PATH)/libwebp-0.3.1/
+JASPER_SRC_PATH	    := $(LOCAL_PATH)/jasper-1.900.1/
 
 ############################################################################################################################################################################################
 #libjpego

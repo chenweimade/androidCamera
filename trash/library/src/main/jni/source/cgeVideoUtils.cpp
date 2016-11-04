@@ -16,8 +16,12 @@
 #include "cgeMultipleEffects.h"
 #include "cgeBlendFilter.h"
 
+using namespace std;
+using namespace Magick;
+
 extern "C"
 {
+
     JNIEXPORT jboolean JNICALL Java_org_wysaid_nativePort_CGEFFmpegNativeLibrary_nativeGenerateVideoWithFilter(JNIEnv *env, jclass cls, jstring outputFilename, jstring inputFilename, jstring filterConfig, jfloat filterIntensity, jobject blendImage, jint blendMode, jfloat blendIntensity, jboolean mute)
     {
         CGE_LOG_INFO("##### nativeGenerateVideoWithFilter!!!");
@@ -64,7 +68,44 @@ extern "C"
         
         return retStatus;
     }
-    
+
+    JNIEXPORT jstring JNICALL Java_org_wysaid_nativePort_CGEFFmpegNativeLibrary_justTest
+    (JNIEnv *env,jobject /* this */,jstring jFilename,jfloat jAngle,jfloat jScale) {
+
+        CGE_LOG_INFO("##### Java_org_wysaid_nativePort_MyTest_justTest!!!");
+
+        //定义list的迭代器
+        list<Image>::iterator iter;
+        list<Image> imageList;//source gif frames
+        list<Image> newList;//changed gif frames
+
+        //get basePath,sourceGif ,angle,width,height from  java
+        double angle = 123.0;
+
+        //rotate have to set bg ,
+        //Magick::Color red = Magick::Color( "white" ); //cause crash....why?
+        //red.alpha(1);
+        //read frames from gif
+        readImages( &imageList, "/mnt/sdcard/libCGE/dragon_fire.gif" );
+        int i = 0;
+        for(iter = imageList.begin(); iter != imageList.end(); iter++)
+        {
+            Image img = *iter;
+            //resize
+            img.resize("100x100");
+            img.backgroundColor(red);
+            img.rotate(angle);
+            newList.push_back(img);
+
+        }
+
+        writeImages( newList.begin(), newList.end(), "/mnt/sdcard/libCGE/dragon_fire_sized.gif");
+        std::string hello = "Hello from C++";
+        return env->NewStringUTF(hello.c_str());
+
+    }
+
+
 }
 
 namespace CGE

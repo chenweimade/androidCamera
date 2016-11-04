@@ -1,0 +1,33 @@
+rm -f /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/*
+rm -f /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/gdbserver
+rm -f /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/gdb.setup
+mkdir -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi
+echo [armeabi] "Install        ": "libCGE.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libCGE.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libCGE.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libCGE.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libCGE.so
+echo [armeabi] "Install        ": "libCGEExt.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libCGEExt.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libCGEExt.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libCGEExt.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libCGEExt.so
+echo [armeabi] "Prebuilt       ": "libffmpeg.so <= /Users/wei/Documents/cy/trash/library/src/main/jni/ffmpeg/armeabi/"
+cp -f /Users/wei/Documents/cy/trash/library/src/main/jni/ffmpeg/armeabi/libffmpeg.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libffmpeg.so
+echo [armeabi] "Install        ": "libffmpeg.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libffmpeg.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libffmpeg.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libffmpeg.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libffmpeg.so
+echo [armeabi] "Install        ": "libfreetype.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libfreetype.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libfreetype.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libfreetype.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libfreetype.so
+echo [armeabi] "Install        ": "libjasper.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libjasper.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libjasper.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libjasper.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libjasper.so
+echo [armeabi] "Install        ": "libmagick.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libmagick.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libmagick.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libmagick.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libmagick.so
+echo [armeabi] "Install        ": "libphysfs.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libphysfs.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libphysfs.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libphysfs.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libphysfs.so
+echo [armeabi] "Install        ": "libpngo.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libpngo.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libpngo.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libpngo.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libpngo.so
+echo [armeabi] "Install        ": "libtiff.so => /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libtiff.so"
+install -p /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/obj/local/armeabi/libtiff.so /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libtiff.so
+/Users/wei/Library/Android/sdk/ndk-bundle/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip --strip-unneeded  /Users/wei/Documents/cy/trash/library/build/intermediates/ndkBuild/release/lib/armeabi/libtiff.so
