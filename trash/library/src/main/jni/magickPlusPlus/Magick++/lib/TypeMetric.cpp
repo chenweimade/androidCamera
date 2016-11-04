@@ -12,6 +12,7 @@
 #include "Magick++/TypeMetric.h"
 #include <string.h>
 
+
 Magick::TypeMetric::TypeMetric(void)
 {
   ResetMagickMemory(&_typeMetric,0,sizeof(_typeMetric));
@@ -55,3 +56,4 @@ double Magick::TypeMetric::underlineThickness(void) const
 {
   return(_typeMetric.underline_thickness);
 }
+

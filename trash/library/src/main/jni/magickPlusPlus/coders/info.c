@@ -39,34 +39,35 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/artifact.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/identify.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/option.h"
-#include "MagickCore/property.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/utility.h"
+#include "magick/studio.h"
+#include "magick/artifact.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/colorspace.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/identify.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/option.h"
+#include "magick/pixel-accessor.h"
+#include "magick/property.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/utility.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteINFOImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteINFOImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -96,9 +97,11 @@ ModuleExport size_t RegisterINFOImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("INFO","INFO","The image format and characteristics");
+  entry=SetMagickInfo("INFO");
   entry->encoder=(EncodeImageHandler *) WriteINFOImage;
-  entry->flags^=CoderBlobSupportFlag;
+  entry->blob_support=MagickFalse;
+  entry->description=ConstantString("The image format and characteristics");
+  entry->module=ConstantString("INFO");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -143,7 +146,7 @@ ModuleExport void UnregisterINFOImage(void)
 %  The format of the WriteINFOImage method is:
 %
 %      MagickBooleanType WriteINFOImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%        Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -151,11 +154,9 @@ ModuleExport void UnregisterINFOImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
 static MagickBooleanType WriteINFOImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
   const char
     *format;
@@ -170,12 +171,12 @@ static MagickBooleanType WriteINFOImage(const ImageInfo *image_info,
     Open output image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
-  status=OpenBlob(image_info,image,WriteBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   scene=0;
@@ -185,19 +186,18 @@ static MagickBooleanType WriteINFOImage(const ImageInfo *image_info,
     if (format == (char *) NULL)
       {
         (void) CopyMagickString(image->filename,image->magick_filename,
-          MagickPathExtent);
+          MaxTextExtent);
         image->magick_columns=image->columns;
         image->magick_rows=image->rows;
         (void) IdentifyImage(image,GetBlobFileHandle(image),
-          image_info->verbose,exception);
+          image_info->verbose);
       }
     else
       {
         char
           *text;
 
-        text=InterpretImageProperties((ImageInfo *) image_info,image,format,
-          exception);
+        text=InterpretImageProperties(image_info,image,format);
         if (text != (char *) NULL)
           {
             (void) WriteBlobString(image,text);

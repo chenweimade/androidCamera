@@ -39,30 +39,29 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/attribute.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/channel.h"
-#include "MagickCore/color.h"
-#include "MagickCore/color-private.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/draw.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/paint.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/studio.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/channel.h"
+#include "magick/color.h"
+#include "magick/color-private.h"
+#include "magick/colorspace-private.h"
+#include "magick/draw.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/paint.h"
+#include "magick/pixel-accessor.h"
+#include "magick/pixel-private.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/studio.h"
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -96,7 +95,7 @@ static Image *ReadGRADIENTImage(const ImageInfo *image_info,
   ExceptionInfo *exception)
 {
   char
-    colorname[MagickPathExtent+4];
+    colorname[MaxTextExtent+4];
 
   Image
     *image;
@@ -108,74 +107,68 @@ static Image *ReadGRADIENTImage(const ImageInfo *image_info,
     icc_color,
     status;
 
-  StopInfo
-    *stops;
+  MagickPixelPacket
+    start_pixel,
+    stop_pixel;
+
+  PixelPacket
+    start_color,
+    stop_color;
 
   /*
     Initialize Image structure.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
+  assert(exception->signature == MagickSignature);
   read_info=CloneImageInfo(image_info);
   SetImageInfoBlob(read_info,(void *) NULL,0);
-  (void) CopyMagickString(colorname,image_info->filename,MagickPathExtent);
+  (void) CopyMagickString(colorname,image_info->filename,MaxTextExtent);
   (void) sscanf(image_info->filename,"%[^-]",colorname);
-  (void) FormatLocaleString(read_info->filename,MagickPathExtent,"xc:%s",
+  (void) FormatLocaleString(read_info->filename,MaxTextExtent,"xc:%s",
     colorname);
   image=ReadImage(read_info,exception);
   read_info=DestroyImageInfo(read_info);
   if (image == (Image *) NULL)
     return((Image *) NULL);
-  (void) SetImageAlpha(image,(Quantum) TransparentAlpha,exception);
-  (void) CopyMagickString(image->filename,image_info->filename,
-    MagickPathExtent);
+  (void) SetImageOpacity(image,(Quantum) TransparentOpacity);
+  (void) CopyMagickString(image->filename,image_info->filename,MaxTextExtent);
   icc_color=MagickFalse;
   if (LocaleCompare(colorname,"icc") == 0)
     {
-      (void) ConcatenateMagickString(colorname,"-",MagickPathExtent);
+      (void) ConcatenateMagickString(colorname,"-",MaxTextExtent);
       (void) sscanf(image_info->filename,"%*[^-]-%[^-]",colorname+4);
       icc_color=MagickTrue;
     }
-  stops=(StopInfo *) AcquireQuantumMemory(2,sizeof(*stops));
-  if (stops == (StopInfo *) NULL)
-    ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
-  stops[0].offset=0.0;
-  stops[1].offset=1.0;
-  status=QueryColorCompliance(colorname,AllCompliance,&stops[0].color,
-    exception);
-  if (status == MagickFalse)
+  if (QueryColorDatabase(colorname,&start_color,exception) == MagickFalse)
     {
-      stops=(StopInfo *) RelinquishMagickMemory(stops);
       image=DestroyImage(image);
       return((Image *) NULL);
     }
-  (void) SetImageColorspace(image,stops[0].color.colorspace,exception);
-  (void) CopyMagickString(colorname,"white",MagickPathExtent);
-  if (GetPixelInfoIntensity(image,&stops[0].color) > (QuantumRange/2.0))
-    (void) CopyMagickString(colorname,"black",MagickPathExtent);
+  (void) QueryMagickColor(colorname,&start_pixel,exception);
+  (void) CopyMagickString(colorname,"white",MaxTextExtent);
+  if (GetPixelLuma(image,&start_color) > (QuantumRange/2.0))
+    (void) CopyMagickString(colorname,"black",MaxTextExtent);
   if (icc_color == MagickFalse)
     (void) sscanf(image_info->filename,"%*[^-]-%[^-]",colorname);
   else
     (void) sscanf(image_info->filename,"%*[^-]-%*[^-]-%[^-]",colorname);
-  status=QueryColorCompliance(colorname,AllCompliance,&stops[1].color,
-    exception);
-  if (status == MagickFalse)
+  if (QueryColorDatabase(colorname,&stop_color,exception) == MagickFalse)
     {
-      stops=(StopInfo *) RelinquishMagickMemory(stops);
       image=DestroyImage(image);
       return((Image *) NULL);
     }
-  image->alpha_trait=stops[0].color.alpha_trait;
-  if (stops[1].color.alpha_trait != UndefinedPixelTrait)
-    image->alpha_trait=stops[1].color.alpha_trait;
+  (void) QueryMagickColor(colorname,&stop_pixel,exception);
+  (void) SetImageColorspace(image,start_pixel.colorspace);
+  image->matte=start_pixel.matte;
+  if (stop_pixel.matte != MagickFalse)
+    image->matte=MagickTrue;
   status=GradientImage(image,LocaleCompare(image_info->magick,"GRADIENT") == 0 ?
-    LinearGradient : RadialGradient,PadSpread,stops,2,exception);
-  stops=(StopInfo *) RelinquishMagickMemory(stops);
+    LinearGradient : RadialGradient,PadSpread,&start_color,&stop_color);
   if (status == MagickFalse)
     {
       image=DestroyImageList(image);
@@ -212,19 +205,23 @@ ModuleExport size_t RegisterGRADIENTImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("GRADIENT","GRADIENT",
-    "Gradual linear passing from one shade to another");
+  entry=SetMagickInfo("GRADIENT");
   entry->decoder=(DecodeImageHandler *) ReadGRADIENTImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderRawSupportFlag;
+  entry->adjoin=MagickFalse;
+  entry->raw=MagickTrue;
   entry->format_type=ImplicitFormatType;
+  entry->description=ConstantString("Gradual linear passing from one shade to "
+    "another");
+  entry->module=ConstantString("GRADIENT");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("GRADIENT","RADIAL-GRADIENT",
-    "Gradual radial passing from one shade to another");
+  entry=SetMagickInfo("RADIAL-GRADIENT");
   entry->decoder=(DecodeImageHandler *) ReadGRADIENTImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderRawSupportFlag;
+  entry->adjoin=MagickFalse;
+  entry->raw=MagickTrue;
   entry->format_type=ImplicitFormatType;
+  entry->description=ConstantString("Gradual radial passing from one shade to "
+    "another");
+  entry->module=ConstantString("GRADIENT");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }

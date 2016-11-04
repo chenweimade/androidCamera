@@ -10,7 +10,7 @@
 %                          CCCC  LLLLL  IIIII  P                              %
 %                                                                             %
 %                                                                             %
-%                        Write Clip Mask To MIFF File.                        %
+%                              Write Clip File.                               %
 %                                                                             %
 %                              Software Design                                %
 %                                   Cristy                                    %
@@ -39,28 +39,29 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/attribute.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
+#include "magick/studio.h"
+#include "magick/attribute.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/constitute.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteCLIPImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteCLIPImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -100,15 +101,15 @@ static Image *ReadCLIPImage(const ImageInfo *image_info,
     Initialize Image structure.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
+  assert(exception->signature == MagickSignature);
   read_info=CloneImageInfo(image_info);
   SetImageInfoBlob(read_info,(void *) NULL,0);
-  (void) CopyMagickString(read_info->magick,"MIFF",MagickPathExtent);
+  (void) CopyMagickString(read_info->magick,"MIFF",MaxTextExtent);
   image=ReadImage(read_info,exception);
   read_info=DestroyImageInfo(read_info);
   if (image != (Image *) NULL)
@@ -116,10 +117,10 @@ static Image *ReadCLIPImage(const ImageInfo *image_info,
       Image
         *clip_image;
 
-      (void) ClipImage(image,exception);
-      clip_image=GetImageMask(image,ReadPixelMask,exception);
-      if (clip_image == (Image *) NULL)
+      (void) ClipImage(image);
+      if (image->clip_mask == (Image *) NULL)
         ThrowReaderException(CoderError,"ImageDoesNotHaveAClipMask");
+      clip_image=CloneImage(image->clip_mask,0,0,MagickTrue,exception);
       image=DestroyImage(image);
       image=clip_image;
     }
@@ -154,9 +155,11 @@ ModuleExport size_t RegisterCLIPImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("CLIP","CLIP","Image Clip Mask");
+  entry=SetMagickInfo("CLIP");
   entry->decoder=(DecodeImageHandler *) ReadCLIPImage;
   entry->encoder=(EncodeImageHandler *) WriteCLIPImage;
+  entry->description=ConstantString("Image Clip Mask");
+  entry->module=ConstantString("CLIP");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -202,7 +205,7 @@ ModuleExport void UnregisterCLIPImage(void)
 %  The format of the WriteCLIPImage method is:
 %
 %      MagickBooleanType WriteCLIPImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%        Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -210,11 +213,9 @@ ModuleExport void UnregisterCLIPImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
 static MagickBooleanType WriteCLIPImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
   Image
     *clip_image;
@@ -225,23 +226,23 @@ static MagickBooleanType WriteCLIPImage(const ImageInfo *image_info,
   MagickBooleanType
     status;
 
-  if (image->read_mask == MagickFalse)
-    (void) ClipImage(image,exception);
-  if (image->read_mask == MagickFalse)
+  if (image->clip_mask == (Image *) NULL)
+    (void) ClipImage(image);
+  if (image->clip_mask == (Image *) NULL)
     ThrowWriterException(CoderError,"ImageDoesNotHaveAClipMask");
-  clip_image=GetImageMask(image,ReadPixelMask,exception);
+  clip_image=CloneImage(image->clip_mask,0,0,MagickTrue,&image->exception);
   if (clip_image == (Image *) NULL)
     return(MagickFalse);
-  (void) CopyMagickString(clip_image->filename,image->filename,
-    MagickPathExtent);
+  (void) SetImageType(clip_image,TrueColorType);
+  (void) CopyMagickString(clip_image->filename,image->filename,MaxTextExtent);
   write_info=CloneImageInfo(image_info);
   *write_info->magick='\0';
-  (void) SetImageInfo(write_info,1,exception);
+  (void) SetImageInfo(write_info,1,&image->exception);
   if ((*write_info->magick == '\0') ||
       (LocaleCompare(write_info->magick,"CLIP") == 0))
-    (void) FormatLocaleString(clip_image->filename,MagickPathExtent,"miff:%s",
+    (void) FormatLocaleString(clip_image->filename,MaxTextExtent,"miff:%s",
       write_info->filename);
-  status=WriteImage(write_info,clip_image,exception);
+  status=WriteImage(write_info,clip_image);
   clip_image=DestroyImage(clip_image);
   write_info=DestroyImageInfo(write_info);
   return(status);

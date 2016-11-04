@@ -39,32 +39,32 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteAVSImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteAVSImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -103,7 +103,7 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
   MemoryInfo
     *pixel_info;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   register ssize_t
@@ -114,7 +114,6 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
 
   size_t
     height,
-    length,
     width;
 
   ssize_t
@@ -128,13 +127,13 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -152,6 +151,9 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
     ThrowReaderException(CorruptImageError,"ImproperImageHeader");
   do
   {
+    ssize_t
+      length;
+
     /*
       Convert AVS raster image to pixel packets.
     */
@@ -161,9 +163,12 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
     if ((image_info->ping != MagickFalse) && (image_info->number_scenes != 0))
       if (image->scene >= (image_info->scene+image_info->number_scenes-1))
         break;
-    status=SetImageExtent(image,image->columns,image->rows,exception);
+    status=SetImageExtent(image,image->columns,image->rows);
     if (status == MagickFalse)
-      return(DestroyImageList(image));
+      {
+        InheritException(exception,&image->exception);
+        return(DestroyImageList(image));
+      }
     pixel_info=AcquireVirtualMemory(image->columns,4*sizeof(*pixels));
     if (pixel_info == (MemoryInfo *) NULL)
       ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
@@ -172,21 +177,21 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
     for (y=0; y < (ssize_t) image->rows; y++)
     {
       count=ReadBlob(image,length,pixels);
-      if ((size_t) count != length)
+      if (count != length)
         ThrowReaderException(CorruptImageError,"UnableToReadImageData");
       p=pixels;
       q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-      if (q == (Quantum *) NULL)
+      if (q == (PixelPacket *) NULL)
         break;
       for (x=0; x < (ssize_t) image->columns; x++)
       {
-        SetPixelAlpha(image,ScaleCharToQuantum(*p++),q);
-        SetPixelRed(image,ScaleCharToQuantum(*p++),q);
-        SetPixelGreen(image,ScaleCharToQuantum(*p++),q);
-        SetPixelBlue(image,ScaleCharToQuantum(*p++),q);
-        if (GetPixelAlpha(image,q) != OpaqueAlpha)
-          image->alpha_trait=BlendPixelTrait;
-        q+=GetPixelChannels(image);
+        SetPixelAlpha(q,ScaleCharToQuantum(*p++));
+        SetPixelRed(q,ScaleCharToQuantum(*p++));
+        SetPixelGreen(q,ScaleCharToQuantum(*p++));
+        SetPixelBlue(q,ScaleCharToQuantum(*p++));
+        if (q->opacity != OpaqueOpacity)
+          image->matte=MagickTrue;
+        q++;
       }
       if (SyncAuthenticPixels(image,exception) == MagickFalse)
         break;
@@ -218,7 +223,7 @@ static Image *ReadAVSImage(const ImageInfo *image_info,ExceptionInfo *exception)
         /*
           Allocate next image structure.
         */
-        AcquireNextImage(image_info,image,exception);
+        AcquireNextImage(image_info,image);
         if (GetNextImageInList(image) == (Image *) NULL)
           {
             image=DestroyImageList(image);
@@ -262,9 +267,11 @@ ModuleExport size_t RegisterAVSImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("AVS","AVS","AVS X image");
+  entry=SetMagickInfo("AVS");
   entry->decoder=(DecodeImageHandler *) ReadAVSImage;
   entry->encoder=(EncodeImageHandler *) WriteAVSImage;
+  entry->description=ConstantString("AVS X image");
+  entry->module=ConstantString("AVS");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -308,8 +315,7 @@ ModuleExport void UnregisterAVSImage(void)
 %
 %  The format of the WriteAVSImage method is:
 %
-%      MagickBooleanType WriteAVSImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%      MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -317,11 +323,8 @@ ModuleExport void UnregisterAVSImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
-static MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image,
-  ExceptionInfo *exception)
+static MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image)
 {
   MagickBooleanType
     status;
@@ -332,7 +335,7 @@ static MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image,
   MemoryInfo
     *pixel_info;
 
-  register const Quantum
+  register const PixelPacket
     *magick_restrict p;
 
   register ssize_t
@@ -352,14 +355,12 @@ static MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image,
     Open output image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
-  assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   scene=0;
@@ -368,7 +369,7 @@ static MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image,
     /*
       Write AVS header.
     */
-    (void) TransformImageColorspace(image,sRGBColorspace,exception);
+    (void) TransformImageColorspace(image,sRGBColorspace);
     (void) WriteBlobMSBLong(image,(unsigned int) image->columns);
     (void) WriteBlobMSBLong(image,(unsigned int) image->rows);
     /*
@@ -383,18 +384,18 @@ static MagickBooleanType WriteAVSImage(const ImageInfo *image_info,Image *image,
     */
     for (y=0; y < (ssize_t) image->rows; y++)
     {
-      p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-      if (p == (const Quantum *) NULL)
+      p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+      if (p == (PixelPacket *) NULL)
         break;
       q=pixels;
       for (x=0; x < (ssize_t) image->columns; x++)
       {
-        *q++=ScaleQuantumToChar((Quantum) (image->alpha_trait ==
-          BlendPixelTrait ? GetPixelAlpha(image,p) : OpaqueAlpha));
-        *q++=ScaleQuantumToChar(GetPixelRed(image,p));
-        *q++=ScaleQuantumToChar(GetPixelGreen(image,p));
-        *q++=ScaleQuantumToChar(GetPixelBlue(image,p));
-        p+=GetPixelChannels(image);
+        *q++=ScaleQuantumToChar((Quantum) (QuantumRange-(image->matte !=
+          MagickFalse ? GetPixelOpacity(p) : OpaqueOpacity)));
+        *q++=ScaleQuantumToChar(GetPixelRed(p));
+        *q++=ScaleQuantumToChar(GetPixelGreen(p));
+        *q++=ScaleQuantumToChar(GetPixelBlue(p));
+        p++;
       }
       count=WriteBlob(image,(size_t) (q-pixels),pixels);
       if (count != (ssize_t) (q-pixels))

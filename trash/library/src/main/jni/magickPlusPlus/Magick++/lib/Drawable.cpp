@@ -1,7 +1,7 @@
 // This may look like C code, but it is really -*- C++ -*-
 //
 // Copyright Bob Friesenhahn, 1999, 2000, 2001, 2002, 2003
-// Copyright Dirk Lemstra 2014-2015
+// Copyright Dirk Lemstra 2014
 //
 // Implementation of Drawable (Graphic objects)
 //
@@ -19,106 +19,117 @@
 
 using namespace std;
 
-MagickPPExport int Magick::operator == (const Magick::Coordinate& left_,
-  const Magick::Coordinate& right_)
+MagickPPExport int Magick::operator == ( const Magick::Coordinate& left_,
+                                        const Magick::Coordinate& right_ )
 {
-  return((left_.x() == right_.x()) && (left_.y() == right_.y()));
+  return ( ( left_.x() == right_.x() ) && ( left_.y() == right_.y() ) );
 }
-
-MagickPPExport int Magick::operator != (const Magick::Coordinate& left_,
-  const Magick::Coordinate& right_)
+MagickPPExport int Magick::operator != ( const Magick::Coordinate& left_,
+                                        const Magick::Coordinate& right_ )
 {
-  return(!(left_ == right_));
+  return ( ! (left_ == right_) );
 }
-
-MagickPPExport int Magick::operator > (const Magick::Coordinate& left_,
-  const Magick::Coordinate& right_)
+MagickPPExport int Magick::operator >  ( const Magick::Coordinate& left_,
+                                        const Magick::Coordinate& right_ )
 {
-  return (!(left_ < right_) && (left_ != right_));
+  return ( !( left_ < right_ ) && ( left_ != right_ ) );
 }
-
-MagickPPExport int Magick::operator < (const Magick::Coordinate& left_,
-  const Magick::Coordinate& right_)
+MagickPPExport int Magick::operator <  ( const Magick::Coordinate& left_,
+                                        const Magick::Coordinate& right_ )
 {
   // Based on distance from origin
-  return((sqrt(left_.x()*left_.x() + left_.y()*left_.y())) <
-    (sqrt(right_.x()*right_.x() + right_.y()*right_.y())));
+  return  ( (sqrt(left_.x()*left_.x() + left_.y()*left_.y())) <
+            (sqrt(right_.x()*right_.x() + right_.y()*right_.y())) );
 }
-
-MagickPPExport int Magick::operator >= (const Magick::Coordinate& left_,
-  const Magick::Coordinate& right_)
+MagickPPExport int Magick::operator >= ( const Magick::Coordinate& left_,
+                                        const Magick::Coordinate& right_ )
 {
-  return((left_ > right_) || (left_ == right_));
+  return ( ( left_ > right_ ) || ( left_ == right_ ) );
 }
-
-MagickPPExport int Magick::operator <= (const Magick::Coordinate& left_,
-  const Magick::Coordinate& right_)
+MagickPPExport int Magick::operator <= ( const Magick::Coordinate& left_,
+                                        const Magick::Coordinate& right_ )
 {
-  return((left_ < right_) || (left_ == right_));
+  return ( ( left_ < right_ ) || ( left_ == right_ ) );
 }
 
-/* DrawableBase */
-Magick::DrawableBase::DrawableBase()
+/*virtual*/
+Magick::DrawableBase::~DrawableBase ( void )
 {
 }
 
-Magick::DrawableBase::~DrawableBase(void)
+// Constructor
+Magick::Drawable::Drawable ( void )
+  : dp(0)
 {
 }
 
-void Magick::DrawableBase::operator()(MagickCore::DrawingWand * context_) const
-{
-  (void) context_;
-}
-
-Magick::DrawableBase* Magick::DrawableBase::copy() const
-{
-  return new DrawableBase(*this);
-}
-
-/* Drawable */
-Magick::Drawable::Drawable(void)
-  : dp((Magick::DrawableBase *) NULL)
-{
-}
-
-Magick::Drawable::Drawable(const Magick::DrawableBase& original_)
+// Construct from DrawableBase
+Magick::Drawable::Drawable ( const Magick::DrawableBase& original_ )
   : dp(original_.copy())
 {
 }
 
-Magick::Drawable::~Drawable(void)
+// Destructor
+Magick::Drawable::~Drawable ( void )
 {
   delete dp;
-  dp=(Magick::DrawableBase *) NULL;
+  dp = 0;
 }
 
-Magick::Drawable::Drawable(const Magick::Drawable& original_)
-  : dp((original_.dp != (Magick::DrawableBase *) NULL ? original_.dp->copy() :
-    (Magick::DrawableBase *) NULL))
+// Copy constructor
+Magick::Drawable::Drawable ( const Magick::Drawable& original_ )
+  : dp(original_.dp? original_.dp->copy(): 0)
 {
 }
 
-Magick::Drawable& Magick::Drawable::operator= (
-  const Magick::Drawable& original_)
+// Assignment operator
+Magick::Drawable& Magick::Drawable::operator= (const Magick::Drawable& original_ )
 {
-  DrawableBase
-    *temp_dp;
-
   if (this != &original_)
     {
-      temp_dp=(original_.dp != (Magick::DrawableBase *) NULL ?
-        original_.dp->copy() : (Magick::DrawableBase *) NULL);
+      DrawableBase* temp_dp = (original_.dp ? original_.dp->copy() : 0);
       delete dp;
-      dp=temp_dp;
+      dp = temp_dp;
     }
-  return(*this);
+  return *this;
 }
 
-void Magick::Drawable::operator()(MagickCore::DrawingWand * context_) const
+// Operator to invoke contained object
+void Magick::Drawable::operator()( MagickCore::DrawingWand * context_ ) const
 {
-  if (dp != (Magick::DrawableBase *) NULL)
-    dp->operator()(context_);
+  if(dp)
+    dp->operator()( context_ );
+}
+
+MagickPPExport int Magick::operator == ( const Magick::Drawable& /*left_*/,
+                                        const Magick::Drawable& /*right_*/ )
+{
+  return ( 1 );
+}
+MagickPPExport int Magick::operator != ( const Magick::Drawable& /*left_*/,
+                                        const Magick::Drawable& /*right_*/ )
+{
+  return ( 0 );
+}
+MagickPPExport int Magick::operator > ( const Magick::Drawable& /*left_*/,
+                                       const Magick::Drawable& /*right_*/ )
+{
+  return ( 0 );
+}
+MagickPPExport int Magick::operator <  ( const Magick::Drawable& /*left_*/,
+                                        const Magick::Drawable& /*right_*/ )
+{
+  return  ( 0 );
+}
+MagickPPExport int Magick::operator >= ( const Magick::Drawable& left_,
+                                        const Magick::Drawable& right_ )
+{
+  return ( ( left_ > right_ ) || ( left_ == right_ ) );
+}
+MagickPPExport int Magick::operator <= ( const Magick::Drawable& left_,
+                                        const Magick::Drawable& right_ )
+{
+  return ( ( left_ < right_ ) || ( left_ == right_ ) );
 }
 
 /*virtual*/
@@ -170,6 +181,37 @@ void Magick::VPath::operator()( MagickCore::DrawingWand * context_ ) const
     dp->operator()( context_ );
 }
 
+MagickPPExport int Magick::operator == ( const Magick::VPath& /*left_*/,
+                                        const Magick::VPath& /*right_*/ )
+{
+  return ( 1 );
+}
+MagickPPExport int Magick::operator != ( const Magick::VPath& /*left_*/,
+                                        const Magick::VPath& /*right_*/ )
+{
+  return ( 0 );
+}
+MagickPPExport int Magick::operator > ( const Magick::VPath& /*left_*/,
+                                       const Magick::VPath& /*right_*/ )
+{
+  return ( 0 );
+}
+MagickPPExport int Magick::operator <  ( const Magick::VPath& /*left_*/,
+                                        const Magick::VPath& /*right_*/ )
+{
+  return  ( 0 );
+}
+MagickPPExport int Magick::operator >= ( const Magick::VPath& left_,
+                                        const Magick::VPath& right_ )
+{
+  return ( ( left_ > right_ ) || ( left_ == right_ ) );
+}
+MagickPPExport int Magick::operator <= ( const Magick::VPath& left_,
+                                        const Magick::VPath& right_ )
+{
+  return ( ( left_ < right_ ) || ( left_ == right_ ) );
+}
+
 //
 // Drawable Objects
 //
@@ -200,20 +242,6 @@ void Magick::DrawableAffine::operator()( MagickCore::DrawingWand * context_ ) co
 Magick::DrawableBase* Magick::DrawableAffine::copy() const
 {
   return new DrawableAffine(*this);
-}
-
-Magick::DrawableAlpha::~DrawableAlpha(void)
-{
-}
-
-void Magick::DrawableAlpha::operator()(MagickCore::DrawingWand * context_) const
-{
-  DrawAlpha(context_,_x,_y,_paintMethod);
-}
-
-Magick::DrawableBase* Magick::DrawableAlpha::copy() const
-{
-  return new DrawableAlpha(*this);
 }
 
 // Arc
@@ -270,120 +298,6 @@ Magick::DrawableBase* Magick::DrawableBezier::copy() const
 {
   return new DrawableBezier(*this);
 }
-
-
-/* DrawableBorderColor */
-Magick::DrawableBorderColor::DrawableBorderColor(const Magick::Color &color_)
-  : _color(color_)
-{
-}
-
-Magick::DrawableBorderColor::DrawableBorderColor
-  (const Magick::DrawableBorderColor &original_)
-  : DrawableBase(original_),
-    _color(original_._color)
-{
-}
-
-Magick::DrawableBorderColor::~DrawableBorderColor(void)
-{
-}
-
-void Magick::DrawableBorderColor::operator()(
-  MagickCore::DrawingWand *context_) const
-{
-  PixelInfo
-    color;
-
-  PixelWand
-    *pixel_wand;
-
-  color=static_cast<PixelInfo>(_color);
-  pixel_wand=NewPixelWand();
-  PixelSetPixelColor(pixel_wand,&color);
-  DrawSetBorderColor(context_,pixel_wand);
-  pixel_wand=DestroyPixelWand(pixel_wand);
-}
-
-void Magick::DrawableBorderColor::color(const Color &color_)
-{
-  _color=color_;
-}
-
-Magick::Color Magick::DrawableBorderColor::color(void) const
-{
-  return(_color);
-}
-
-Magick::DrawableBase* Magick::DrawableBorderColor::copy() const
-{
-  return(new DrawableBorderColor(*this));
-}
-
-
-/* DrawableClipRule */
-Magick::DrawableClipRule::DrawableClipRule(const FillRule fillRule_)
-{
-  _fillRule=fillRule_;
-}
-
-Magick::DrawableClipRule::~DrawableClipRule(void)
-{
-}
-
-void Magick::DrawableClipRule::operator()(
-  MagickCore::DrawingWand * context_) const
-{
-  DrawSetClipRule(context_,_fillRule);
-}
-
-void Magick::DrawableClipRule::fillRule(const FillRule fillRule_)
-{
-  _fillRule=fillRule_;
-}
-
-Magick::FillRule Magick::DrawableClipRule::fillRule(void) const
-{
-  return(_fillRule);
-}
-
-Magick::DrawableBase* Magick::DrawableClipRule::copy() const
-{
-  return(new DrawableClipRule(*this));
-}
-
-
-/* DrawableClipUnits */
-Magick::DrawableClipUnits::DrawableClipUnits(const ClipPathUnits units_)
-{
-  _units = units_;
-}
-
-Magick::DrawableClipUnits::~DrawableClipUnits(void)
-{
-}
-
-void Magick::DrawableClipUnits::operator()(
-  MagickCore::DrawingWand * context_) const
-{
-  DrawSetClipUnits(context_, _units);
-}
-
-void Magick::DrawableClipUnits::units(const ClipPathUnits units_)
-{
-  _units = units_;
-}
-
-Magick::ClipPathUnits Magick::DrawableClipUnits::units(void) const
-{
-  return(_units);
-}
-
-Magick::DrawableBase* Magick::DrawableClipUnits::copy() const
-{
-  return(new DrawableClipUnits(*this));
-}
-
 
 //
 //Clip Path 
@@ -638,11 +552,6 @@ Magick::DrawableBase* Magick::DrawableCompositeImage::copy() const
   return new DrawableCompositeImage(*this);
 }
 
-Magick::DrawableDensity::DrawableDensity(const Point &density_)
-  : _density(density_)
-{
-}
-
 Magick::DrawableDensity::DrawableDensity(const std::string &density_)
   : _density(density_)
 {
@@ -695,53 +604,15 @@ Magick::DrawableFillColor::~DrawableFillColor( void )
 void Magick::DrawableFillColor::operator()
   ( MagickCore::DrawingWand * context_ ) const
 {
-  PixelInfo color = static_cast<PixelInfo>(_color);
+  PixelPacket color = static_cast<PixelPacket>(_color);
   PixelWand *pixel_wand=NewPixelWand();
-  PixelSetPixelColor(pixel_wand,&color);
+  PixelSetQuantumColor(pixel_wand,&color);
   DrawSetFillColor(context_,pixel_wand);
   pixel_wand=DestroyPixelWand(pixel_wand);
 }
 Magick::DrawableBase* Magick::DrawableFillColor::copy() const
 {
   return new DrawableFillColor(*this);
-}
-
-/* DrawableFillPatternUrl */
-Magick::DrawableFillPatternUrl::DrawableFillPatternUrl(const std::string &url_)
-  : _url(url_)
-{
-}
-
-Magick::DrawableFillPatternUrl::DrawableFillPatternUrl(
-  const Magick::DrawableFillPatternUrl& original_)
-  : DrawableBase(original_),
-  _url(original_._url)
-{
-}
-
-Magick::DrawableFillPatternUrl::~DrawableFillPatternUrl(void)
-{
-}
-
-void Magick::DrawableFillPatternUrl::operator()(
-  MagickCore::DrawingWand * context_) const
-{
-  DrawSetFillPatternURL(context_, _url.c_str());
-}
-
-void Magick::DrawableFillPatternUrl::url(const std::string &url_)
-{
-  _url = url_;
-}
-
-std::string Magick::DrawableFillPatternUrl::url(void) const
-{
-  return(_url);
-}
-
-Magick::DrawableBase* Magick::DrawableFillPatternUrl::copy() const
-{
-  return(new DrawableFillPatternUrl(*this));
 }
 
 // Specify drawing fill fule
@@ -758,16 +629,15 @@ Magick::DrawableBase* Magick::DrawableFillRule::copy() const
   return new DrawableFillRule(*this);
 }
 
-Magick::DrawableFillOpacity::~DrawableFillOpacity(void)
+// Specify drawing fill opacity
+Magick::DrawableFillOpacity::~DrawableFillOpacity ( void )
 {
 }
-
 void Magick::DrawableFillOpacity::operator()
-  (MagickCore::DrawingWand *context_) const
+  ( MagickCore::DrawingWand * context_ ) const
 {
-  DrawSetFillOpacity(context_,_opacity);
+  DrawSetFillOpacity( context_, _opacity );
 }
-
 Magick::DrawableBase* Magick::DrawableFillOpacity::copy() const
 {
   return new DrawableFillOpacity(*this);
@@ -858,6 +728,19 @@ void Magick::DrawableLine::operator()( MagickCore::DrawingWand * context_ ) cons
 Magick::DrawableBase* Magick::DrawableLine::copy() const
 {
   return new DrawableLine(*this);
+}
+
+// Change pixel matte value to transparent using PaintMethod
+Magick::DrawableMatte::~DrawableMatte ( void )
+{
+}
+void Magick::DrawableMatte::operator()( MagickCore::DrawingWand * context_ ) const
+{
+  DrawMatte( context_, _x, _y, _paintMethod );
+}
+Magick::DrawableBase* Magick::DrawableMatte::copy() const
+{
+  return new DrawableMatte(*this);
 }
 
 // Drawable Path
@@ -1155,16 +1038,23 @@ Magick::DrawableBase* Magick::DrawableSkewY::copy() const
   return new DrawableSkewY(*this);
 }
 
-/* DrawableStrokeDashArray */
-Magick::DrawableStrokeDashArray::DrawableStrokeDashArray(const double* dasharray_)
+// Stroke dasharray
+Magick::DrawableDashArray::DrawableDashArray( const double* dasharray_ )
   : _size(0),
     _dasharray(0)
 {
-  dasharray(dasharray_);
+  dasharray( dasharray_ );
 }
-
-Magick::DrawableStrokeDashArray::DrawableStrokeDashArray(
-  const Magick::DrawableStrokeDashArray& original_)
+// Deprecated, do not use for new code, and migrate existing code to
+// using double*
+Magick::DrawableDashArray::DrawableDashArray( const size_t* dasharray_ )
+  : _size(0),
+    _dasharray(0)
+{
+  dasharray( dasharray_ );
+}
+Magick::DrawableDashArray::DrawableDashArray
+(const Magick::DrawableDashArray& original_)
   : DrawableBase (original_),
     _size(original_._size),
     _dasharray(new double[_size+1])
@@ -1176,18 +1066,16 @@ Magick::DrawableStrokeDashArray::DrawableStrokeDashArray(
     _dasharray[_size]=0.0;
   }
 }
-
-Magick::DrawableStrokeDashArray::~DrawableStrokeDashArray(void)
+Magick::DrawableDashArray::~DrawableDashArray( void )
 {
   delete [] _dasharray;
-  _size=0;
-  _dasharray=(double *) NULL;
+  _size = 0;
+  _dasharray = 0;
 }
-
-Magick::DrawableStrokeDashArray& Magick::DrawableStrokeDashArray::operator=(
-  const Magick::DrawableStrokeDashArray &original_)
+Magick::DrawableDashArray& Magick::DrawableDashArray::operator=
+(const Magick::DrawableDashArray &original_)
 {
-  if (this != &original_)
+  if( this != &original_ )
     {
       delete [] _dasharray;
       _size=original_._size;
@@ -1199,43 +1087,34 @@ Magick::DrawableStrokeDashArray& Magick::DrawableStrokeDashArray::operator=(
         _dasharray[_size]=0.0;
       }
     }
-  return(*this);
+  return *this;
 }
-
-void Magick::DrawableStrokeDashArray::operator()(
-  MagickCore::DrawingWand *context_) const
+// Invoke object
+void Magick::DrawableDashArray::operator()
+  ( MagickCore::DrawingWand *context_ ) const
 {
-  (void) DrawSetStrokeDashArray(context_,(const unsigned long) _size,
-    _dasharray);
+  (void) DrawSetStrokeDashArray( context_, (const unsigned long) _size, _dasharray );
 }
-
-Magick::DrawableBase *Magick::DrawableStrokeDashArray::copy() const
+Magick::DrawableBase* Magick::DrawableDashArray::copy() const
 {
-  return(new DrawableStrokeDashArray(*this));
+  return new DrawableDashArray(*this);
 }
-
-void Magick::DrawableStrokeDashArray::dasharray(const double* dasharray_)
+void Magick::DrawableDashArray::dasharray ( const double* dasharray_ )
 {
-  size_t
-    n;
-
   delete [] _dasharray;
-  _size=0;
-  _dasharray=0;
+  _size = 0;
+  _dasharray = 0;
 
-  if (dasharray_ != (const double *) NULL)
+  if(dasharray_)
     {
-      const double
-        *p;
-
       // Count elements in dash array
-      n=0;
+      size_t n = 0;
       {
-        p = dasharray_;
+        const double *p = dasharray_;
         while(*p++ != 0.0)
           n++;
       }
-      _size=n;
+      _size = n;
 
       // Allocate elements
       _dasharray=new double[_size+1];
@@ -1247,36 +1126,49 @@ void Magick::DrawableStrokeDashArray::dasharray(const double* dasharray_)
       }
     }
 }
-
-const double* Magick::DrawableStrokeDashArray::dasharray(void) const
+// This method is deprecated.  Don't use for new code, and migrate existing
+// code to the const double* version.
+void Magick::DrawableDashArray::dasharray( const size_t* dasharray_ )
 {
-  return(_dasharray);
+  if (_dasharray)
+      delete [] _dasharray;
+  _size = 0;
+  _dasharray = 0;
+
+  if(dasharray_)
+    {
+      // Count elements in dash array
+      size_t n = 0;
+      {
+        const size_t *p = dasharray_;
+        while(*p++ != 0)
+          n++;
+      }
+      _size = n;
+
+      // Allocate elements
+      _dasharray=new double[_size+1];
+      // Copy elements
+      {
+        for (size_t i=0; i < _size; i++)
+          _dasharray[i]=dasharray_[i];
+        _dasharray[_size]=0;
+      }
+    }
 }
 
-/* DrawableStrokeDashOffset */
-Magick::DrawableStrokeDashOffset::~DrawableStrokeDashOffset(void)
+// Stroke dashoffset
+Magick::DrawableDashOffset::~DrawableDashOffset ( void )
 {
 }
-
-void Magick::DrawableStrokeDashOffset::operator()
-  ( MagickCore::DrawingWand * context_) const
+void Magick::DrawableDashOffset::operator()
+  ( MagickCore::DrawingWand * context_ ) const
 {
-  DrawSetStrokeDashOffset(context_,_offset);
+  DrawSetStrokeDashOffset( context_, _offset );
 }
-
-Magick::DrawableBase* Magick::DrawableStrokeDashOffset::copy() const
+Magick::DrawableBase* Magick::DrawableDashOffset::copy() const
 {
-  return(new DrawableStrokeDashOffset(*this));
-}
-
-void Magick::DrawableStrokeDashOffset::offset(const double offset_)
-{
-  _offset=offset_;
-}
-
-double Magick::DrawableStrokeDashOffset::offset(void) const
-{
-  return(_offset);
+  return new DrawableDashOffset(*this);
 }
 
 // Stroke linecap
@@ -1321,46 +1213,6 @@ Magick::DrawableBase* Magick::DrawableMiterLimit::copy() const
   return new DrawableMiterLimit(*this);
 }
 
-
-/* DrawableStrokePatternUrl */
-Magick::DrawableStrokePatternUrl::DrawableStrokePatternUrl(
-  const std::string &url_)
-  : _url(url_)
-{
-}
-
-Magick::DrawableStrokePatternUrl::DrawableStrokePatternUrl(
-  const Magick::DrawableStrokePatternUrl& original_)
-  : DrawableBase(original_),
-  _url(original_._url)
-{
-}
-
-Magick::DrawableStrokePatternUrl::~DrawableStrokePatternUrl(void)
-{
-}
-
-void Magick::DrawableStrokePatternUrl::operator()(
-  MagickCore::DrawingWand * context_) const
-{
-  DrawSetStrokePatternURL(context_, _url.c_str());
-}
-
-void Magick::DrawableStrokePatternUrl::url(const std::string &url_)
-{
-  _url = url_;
-}
-
-std::string Magick::DrawableStrokePatternUrl::url(void) const
-{
-  return(_url);
-}
-
-Magick::DrawableBase* Magick::DrawableStrokePatternUrl::copy() const
-{
-  return(new DrawableStrokePatternUrl(*this));
-}
-
 // Stroke antialias
 Magick::DrawableStrokeAntialias::~DrawableStrokeAntialias ( void )
 {
@@ -1394,9 +1246,9 @@ Magick::DrawableStrokeColor::~DrawableStrokeColor ( void )
 void Magick::DrawableStrokeColor::operator()
   ( MagickCore::DrawingWand * context_ ) const
 {
-  PixelInfo color = static_cast<PixelInfo>(_color);
+  PixelPacket color = static_cast<PixelPacket>(_color);
   PixelWand *pixel_wand=NewPixelWand();
-  PixelSetPixelColor(pixel_wand,&color);
+  PixelSetQuantumColor(pixel_wand,&color);
   DrawSetStrokeColor(context_,pixel_wand);
   pixel_wand=DestroyPixelWand(pixel_wand);
 }
@@ -1405,16 +1257,15 @@ Magick::DrawableBase* Magick::DrawableStrokeColor::copy() const
   return new DrawableStrokeColor(*this);
 }
 
-Magick::DrawableStrokeOpacity::~DrawableStrokeOpacity(void)
+// Stroke opacity
+Magick::DrawableStrokeOpacity::~DrawableStrokeOpacity ( void )
 {
 }
-
 void Magick::DrawableStrokeOpacity::operator()
-  (MagickCore::DrawingWand * context_) const
+  ( MagickCore::DrawingWand * context_ ) const
 {
-  DrawSetStrokeOpacity(context_,_opacity);
+  DrawSetStrokeOpacity( context_, _opacity );
 }
-
 Magick::DrawableBase* Magick::DrawableStrokeOpacity::copy() const
 {
   return new DrawableStrokeOpacity(*this);
@@ -1474,45 +1325,6 @@ Magick::DrawableBase* Magick::DrawableText::copy() const
   return new DrawableText(*this);
 }
 
-/* DrawableTextAlignment */
-Magick::DrawableTextAlignment::DrawableTextAlignment(
-  Magick::AlignType alignment_)
-  : _alignment(alignment_)
-{
-}
-
-Magick::DrawableTextAlignment::DrawableTextAlignment
-(const Magick::DrawableTextAlignment &original_)
-  : DrawableBase(original_),
-  _alignment(original_._alignment)
-{
-}
-
-Magick::DrawableTextAlignment::~DrawableTextAlignment(void)
-{
-}
-
-void Magick::DrawableTextAlignment::operator()(
-  MagickCore::DrawingWand * context_) const
-{
-  DrawSetTextAlignment(context_, _alignment);
-}
-
-void Magick::DrawableTextAlignment::alignment(AlignType alignment_)
-{
-  _alignment=alignment_;
-}
-
-Magick::AlignType Magick::DrawableTextAlignment::alignment(void) const
-{
-  return(_alignment);
-}
-
-Magick::DrawableBase* Magick::DrawableTextAlignment::copy() const
-{
-  return new DrawableTextAlignment(*this);
-}
-
 // Text antialias
 Magick::DrawableTextAntialias::DrawableTextAntialias ( bool flag_ )
   : _flag(flag_)
@@ -1536,7 +1348,6 @@ Magick::DrawableBase* Magick::DrawableTextAntialias::copy() const
 {
   return new DrawableTextAntialias(*this);
 }
-
 
 // Decoration (text decoration)
 Magick::DrawableTextDecoration::DrawableTextDecoration
@@ -1709,9 +1520,9 @@ Magick::DrawableTextUnderColor::~DrawableTextUnderColor ( void )
 void Magick::DrawableTextUnderColor::operator()
   ( MagickCore::DrawingWand * context_ ) const
 {
-  PixelInfo color = static_cast<PixelInfo>(_color);
+  PixelPacket color = static_cast<PixelPacket>(_color);
   PixelWand *pixel_wand=NewPixelWand();
-  PixelSetPixelColor(pixel_wand,&color);
+  PixelSetQuantumColor(pixel_wand,&color);
   DrawSetTextUnderColor(context_,pixel_wand);
   pixel_wand=DestroyPixelWand(pixel_wand);
 }
@@ -2489,10 +2300,10 @@ Magick::VPathBase* Magick::PathMovetoRel::copy() const
 }
 
 #if defined(EXPLICIT_TEMPLATE_INSTANTIATION)
-// template class std::vector<Magick::Coordinate>;
-// template class std::vector<const Magick::Drawable>;
-// template class std::vector<const Magick::PathArcArgs>;
-// template class std::vector<const Magick::PathCurvetoArgs>;
-// template class std::vector<const Magick::PathQuadraticCurvetoArgs>;
-// template class std::vector<const Magick::VPath>;
+// template class std::list<Magick::Coordinate>;
+// template class std::list<const Magick::Drawable>;
+// template class std::list<const Magick::PathArcArgs>;
+// template class std::list<const Magick::PathCurvetoArgs>;
+// template class std::list<const Magick::PathQuadraticCurvetoArgs>;
+// template class std::list<const Magick::VPath>;
 #endif

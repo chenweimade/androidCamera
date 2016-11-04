@@ -39,39 +39,39 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/attribute.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/color.h"
-#include "MagickCore/color-private.h"
-#include "MagickCore/colormap.h"
-#include "MagickCore/colormap-private.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/memory-private.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/property.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
+#include "magick/studio.h"
+#include "magick/attribute.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/color.h"
+#include "magick/color-private.h"
+#include "magick/colormap.h"
+#include "magick/colormap-private.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/memory-private.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/property.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteVIFFImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteVIFFImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -224,10 +224,13 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
   MagickSizeType
     number_pixels;
 
+  register IndexPacket
+    *indexes;
+
   register ssize_t
     x;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   register ssize_t
@@ -258,13 +261,13 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -291,10 +294,10 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
     (void) ReadBlob(image,sizeof(viff_info.machine_dependency),
       &viff_info.machine_dependency);
     (void) ReadBlob(image,sizeof(viff_info.reserve),viff_info.reserve);
-    count=ReadBlob(image,512,(unsigned char *) viff_info.comment);
+    (void) ReadBlob(image,512,(unsigned char *) viff_info.comment);
     viff_info.comment[511]='\0';
     if (strlen(viff_info.comment) > 4)
-      (void) SetImageProperty(image,"comment",viff_info.comment,exception);
+      (void) SetImageProperty(image,"comment",viff_info.comment);
     if ((viff_info.machine_dependency == VFF_DEP_DECORDER) ||
         (viff_info.machine_dependency == VFF_DEP_NSORDER))
       image->endian=LSBEndian;
@@ -381,8 +384,7 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
                 image->colors=256UL;
               else
                 image->colors=image->depth <= 8 ? 256UL : 65536UL;
-            status=AcquireImageColormap(image,image->colors,exception);
-            if (status == MagickFalse)
+            if (AcquireImageColormap(image,image->colors) == MagickFalse)
               ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
           }
         break;
@@ -406,7 +408,7 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
           default: bytes_per_pixel=1; break;
         }
         image->colors=viff_info.map_columns;
-        if (AcquireImageColormap(image,image->colors,exception) == MagickFalse)
+        if (AcquireImageColormap(image,image->colors) == MagickFalse)
           ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
         if (viff_info.map_rows >
             (viff_info.map_rows*bytes_per_pixel*sizeof(*viff_colormap)))
@@ -418,7 +420,7 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
         /*
           Read VIFF raster colormap.
         */
-        count=ReadBlob(image,bytes_per_pixel*image->colors*viff_info.map_rows,
+        (void) ReadBlob(image,bytes_per_pixel*image->colors*viff_info.map_rows,
           viff_colormap);
         lsb_first=1;
         if (*(char *) &lsb_first &&
@@ -454,18 +456,18 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
           if (i < (ssize_t) image->colors)
             {
               image->colormap[i].red=ScaleCharToQuantum((unsigned char) value);
-              image->colormap[i].green=
-                ScaleCharToQuantum((unsigned char) value);
+              image->colormap[i].green=ScaleCharToQuantum((unsigned char)
+                value);
               image->colormap[i].blue=ScaleCharToQuantum((unsigned char) value);
             }
           else
             if (i < (ssize_t) (2*image->colors))
-              image->colormap[i % image->colors].green=
-                ScaleCharToQuantum((unsigned char) value);
+              image->colormap[i % image->colors].green=ScaleCharToQuantum(
+                (unsigned char) value);
             else
               if (i < (ssize_t) (3*image->colors))
-                image->colormap[i % image->colors].blue=
-                  ScaleCharToQuantum((unsigned char) value);
+                image->colormap[i % image->colors].blue=ScaleCharToQuantum(
+                  (unsigned char) value);
         }
         viff_colormap=(unsigned char *) RelinquishMagickMemory(viff_colormap);
         break;
@@ -476,18 +478,20 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
     /*
       Initialize image structure.
     */
-    image->alpha_trait=viff_info.number_data_bands == 4 ? BlendPixelTrait :
-      UndefinedPixelTrait;
-    image->storage_class=(viff_info.number_data_bands < 3 ? PseudoClass :
-      DirectClass);
+    image->matte=viff_info.number_data_bands == 4 ? MagickTrue : MagickFalse;
+    image->storage_class=
+      (viff_info.number_data_bands < 3 ? PseudoClass : DirectClass);
     image->columns=viff_info.rows;
     image->rows=viff_info.columns;
     if ((image_info->ping != MagickFalse) && (image_info->number_scenes != 0))
       if (image->scene >= (image_info->scene+image_info->number_scenes-1))
         break;
-    status=SetImageExtent(image,image->columns,image->rows,exception);
+    status=SetImageExtent(image,image->columns,image->rows);
     if (status == MagickFalse)
-      return(DestroyImageList(image));
+      {
+        InheritException(exception,&image->exception);
+        return(DestroyImageList(image));
+      }
     /*
       Allocate VIFF pixels.
     */
@@ -515,7 +519,7 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
       max_packets),bytes_per_pixel*sizeof(*pixels));
     if (pixels == (unsigned char *) NULL)
       ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
-    count=ReadBlob(image,bytes_per_pixel*max_packets,pixels);
+    (void) ReadBlob(image,bytes_per_pixel*max_packets,pixels);
     lsb_first=1;
     if (*(char *) &lsb_first &&
         ((viff_info.machine_dependency != VFF_DEP_DECORDER) &&
@@ -577,11 +581,11 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
         else
           if (min_value == max_value)
             {
-              scale_factor=(double) QuantumRange/min_value;
+              scale_factor=(MagickRealType) QuantumRange/min_value;
               min_value=0;
             }
           else
-            scale_factor=(double) QuantumRange/(max_value-min_value);
+            scale_factor=(MagickRealType) QuantumRange/(max_value-min_value);
       }
     /*
       Convert pixels to Quantum size.
@@ -618,23 +622,25 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
         /*
           Convert bitmap scanline.
         */
+        if (image->storage_class != PseudoClass)
+          ThrowReaderException(CorruptImageError,"ImproperImageHeader");
         for (y=0; y < (ssize_t) image->rows; y++)
         {
           q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
+          indexes=GetAuthenticIndexQueue(image);
           for (x=0; x < (ssize_t) (image->columns-7); x+=8)
           {
             for (bit=0; bit < 8; bit++)
             {
               quantum=(size_t) ((*p) & (0x01 << bit) ? 0 : 1);
-              SetPixelRed(image,quantum == 0 ? 0 : QuantumRange,q);
-              SetPixelGreen(image,quantum == 0 ? 0 : QuantumRange,q);
-              SetPixelBlue(image,quantum == 0 ? 0 : QuantumRange,q);
+              SetPixelRed(q,quantum == 0 ? 0 : QuantumRange);
+              SetPixelGreen(q,quantum == 0 ? 0 : QuantumRange);
+              SetPixelBlue(q,quantum == 0 ? 0 : QuantumRange);
               if (image->storage_class == PseudoClass)
-                SetPixelIndex(image,(Quantum) quantum,q);
-              q+=GetPixelChannels(image);
-            }
+                SetPixelIndex(indexes+x+bit,quantum);
+             }
             p++;
           }
           if ((image->columns % 8) != 0)
@@ -642,12 +648,11 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
               for (bit=0; bit < (int) (image->columns % 8); bit++)
               {
                 quantum=(size_t) ((*p) & (0x01 << bit) ? 0 : 1);
-                SetPixelRed(image,quantum == 0 ? 0 : QuantumRange,q);
-                SetPixelGreen(image,quantum == 0 ? 0 : QuantumRange,q);
-                SetPixelBlue(image,quantum == 0 ? 0 : QuantumRange,q);
+                SetPixelRed(q,quantum == 0 ? 0 : QuantumRange);
+                SetPixelGreen(q,quantum == 0 ? 0 : QuantumRange);
+                SetPixelBlue(q,quantum == 0 ? 0 : QuantumRange);
                 if (image->storage_class == PseudoClass)
-                  SetPixelIndex(image,(Quantum) quantum,q);
-                q+=GetPixelChannels(image);
+                  SetPixelIndex(indexes+x+bit,quantum);
               }
               p++;
             }
@@ -667,13 +672,11 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
         for (y=0; y < (ssize_t) image->rows; y++)
         {
           q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
+          indexes=GetAuthenticIndexQueue(image);
           for (x=0; x < (ssize_t) image->columns; x++)
-          {
-            SetPixelIndex(image,*p++,q);
-            q+=GetPixelChannels(image);
-          }
+            SetPixelIndex(indexes+x,*p++);
           if (SyncAuthenticPixels(image,exception) == MagickFalse)
             break;
           if (image->previous == (Image *) NULL)
@@ -693,32 +696,32 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
           for (y=0; y < (ssize_t) image->rows; y++)
           {
             q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-            if (q == (Quantum *) NULL)
+            if (q == (PixelPacket *) NULL)
               break;
             for (x=0; x < (ssize_t) image->columns; x++)
             {
-              SetPixelRed(image,ScaleCharToQuantum(*p),q);
-              SetPixelGreen(image,ScaleCharToQuantum(*(p+number_pixels)),q);
-              SetPixelBlue(image,ScaleCharToQuantum(*(p+2*number_pixels)),q);
+              SetPixelRed(q,ScaleCharToQuantum(*p));
+              SetPixelGreen(q,ScaleCharToQuantum(*(p+number_pixels)));
+              SetPixelBlue(q,ScaleCharToQuantum(*(p+2*number_pixels)));
               if (image->colors != 0)
                 {
                   ssize_t
                     index;
 
-                  index=(ssize_t) GetPixelRed(image,q);
-                  SetPixelRed(image,image->colormap[
-                    ConstrainColormapIndex(image,index,exception)].red,q);
-                  index=(ssize_t) GetPixelGreen(image,q);
-                  SetPixelGreen(image,image->colormap[
-                    ConstrainColormapIndex(image,index,exception)].green,q);
-                  index=(ssize_t) GetPixelBlue(image,q);
-                  SetPixelBlue(image,image->colormap[
-                    ConstrainColormapIndex(image,index,exception)].blue,q);
+                  index=(ssize_t) GetPixelRed(q);
+                  SetPixelRed(q,image->colormap[(ssize_t)
+                    ConstrainColormapIndex(image,index)].red);
+                  index=(ssize_t) GetPixelGreen(q);
+                  SetPixelGreen(q,image->colormap[(ssize_t)
+                    ConstrainColormapIndex(image,index)].green);
+                  index=(ssize_t) GetPixelRed(q);
+                  SetPixelBlue(q,image->colormap[(ssize_t)
+                    ConstrainColormapIndex(image,index)].blue);
                 }
-              SetPixelAlpha(image,image->alpha_trait != UndefinedPixelTrait ?
-                ScaleCharToQuantum(*(p+number_pixels*3)) : OpaqueAlpha,q);
+              SetPixelOpacity(q,image->matte != MagickFalse ? QuantumRange-
+                ScaleCharToQuantum(*(p+number_pixels*3)) : OpaqueOpacity);
               p++;
-              q+=GetPixelChannels(image);
+              q++;
             }
             if (SyncAuthenticPixels(image,exception) == MagickFalse)
               break;
@@ -733,7 +736,7 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
         }
     pixels=(unsigned char *) RelinquishMagickMemory(pixels);
     if (image->storage_class == PseudoClass)
-      (void) SyncImage(image,exception);
+      (void) SyncImage(image);
     if (EOFBlob(image) != MagickFalse)
       {
         ThrowFileException(exception,CorruptImageError,"UnexpectedEndOfFile",
@@ -752,7 +755,7 @@ static Image *ReadVIFFImage(const ImageInfo *image_info,
         /*
           Allocate next image structure.
         */
-        AcquireNextImage(image_info,image,exception);
+        AcquireNextImage(image_info,image);
         if (GetNextImageInList(image) == (Image *) NULL)
           {
             image=DestroyImageList(image);
@@ -797,14 +800,18 @@ ModuleExport size_t RegisterVIFFImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("VIFF","VIFF","Khoros Visualization image");
+  entry=SetMagickInfo("VIFF");
   entry->decoder=(DecodeImageHandler *) ReadVIFFImage;
   entry->encoder=(EncodeImageHandler *) WriteVIFFImage;
   entry->magick=(IsImageFormatHandler *) IsVIFF;
+  entry->description=ConstantString("Khoros Visualization image");
+  entry->module=ConstantString("VIFF");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("VIFF","XV","Khoros Visualization image");
+  entry=SetMagickInfo("XV");
   entry->decoder=(DecodeImageHandler *) ReadVIFFImage;
   entry->encoder=(EncodeImageHandler *) WriteVIFFImage;
+  entry->description=ConstantString("Khoros Visualization image");
+  entry->module=ConstantString("VIFF");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -850,7 +857,7 @@ ModuleExport void UnregisterVIFFImage(void)
 %  The format of the WriteVIFFImage method is:
 %
 %      MagickBooleanType WriteVIFFImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%        Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -858,11 +865,9 @@ ModuleExport void UnregisterVIFFImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
 static MagickBooleanType WriteVIFFImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
 #define VFF_CM_genericRGB  15
 #define VFF_CM_NONE  0
@@ -931,7 +936,10 @@ static MagickBooleanType WriteVIFFImage(const ImageInfo *image_info,
   MemoryInfo
     *pixel_info;
 
-  register const Quantum
+  register const IndexPacket
+    *indexes;
+
+  register const PixelPacket
     *p;
 
   register ssize_t
@@ -956,14 +964,12 @@ static MagickBooleanType WriteVIFFImage(const ImageInfo *image_info,
     Open output image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
-  assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   (void) ResetMagickMemory(&viff_info,0,sizeof(ViffInfo));
@@ -973,7 +979,7 @@ static MagickBooleanType WriteVIFFImage(const ImageInfo *image_info,
     /*
       Initialize VIFF image structure.
     */
-    (void) TransformImageColorspace(image,sRGBColorspace,exception);
+    (void) TransformImageColorspace(image,sRGBColorspace);
 DisableMSCWarning(4310)
     viff_info.identifier=(char) 0xab;
 RestoreMSCWarning
@@ -982,7 +988,7 @@ RestoreMSCWarning
     viff_info.version=3;
     viff_info.machine_dependency=VFF_DEP_IEEEORDER;  /* IEEE byte ordering */
     *viff_info.comment='\0';
-    value=GetImageProperty(image,"comment",exception);
+    value=GetImageProperty(image,"comment");
     if (value != (const char *) NULL)
       (void) CopyMagickString(viff_info.comment,value,MagickMin(strlen(value),
         511)+1);
@@ -1010,7 +1016,7 @@ RestoreMSCWarning
         /*
           Full color VIFF raster.
         */
-        viff_info.number_data_bands=image->alpha_trait ? 4U : 3U;
+        viff_info.number_data_bands=image->matte ? 4U : 3U;
         viff_info.color_space_model=VFF_CM_genericRGB;
         viff_info.data_storage_type=VFF_TYP_1_BYTE;
         packets=viff_info.number_data_bands*number_pixels;
@@ -1021,7 +1027,7 @@ RestoreMSCWarning
         viff_info.color_space_model=VFF_CM_NONE;
         viff_info.data_storage_type=VFF_TYP_1_BYTE;
         packets=number_pixels;
-        if (SetImageGray(image,exception) == MagickFalse)
+        if (SetImageGray(image,&image->exception) == MagickFalse)
           {
             /*
               Colormapped VIFF raster.
@@ -1098,18 +1104,18 @@ RestoreMSCWarning
         number_pixels=(MagickSizeType) image->columns*image->rows;
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
           for (x=0; x < (ssize_t) image->columns; x++)
           {
-            *q=ScaleQuantumToChar(GetPixelRed(image,p));
-            *(q+number_pixels)=ScaleQuantumToChar(GetPixelGreen(image,p));
-            *(q+number_pixels*2)=ScaleQuantumToChar(GetPixelBlue(image,p));
-            if (image->alpha_trait != UndefinedPixelTrait)
+            *q=ScaleQuantumToChar(GetPixelRed(p));
+            *(q+number_pixels)=ScaleQuantumToChar(GetPixelGreen(p));
+            *(q+number_pixels*2)=ScaleQuantumToChar(GetPixelBlue(p));
+            if (image->matte != MagickFalse)
               *(q+number_pixels*3)=ScaleQuantumToChar((Quantum)
-                (GetPixelAlpha(image,p)));
-            p+=GetPixelChannels(image);
+                (GetPixelAlpha(p)));
+            p++;
             q++;
           }
           if (image->previous == (Image *) NULL)
@@ -1122,7 +1128,7 @@ RestoreMSCWarning
         }
       }
     else
-      if (SetImageGray(image,exception) == MagickFalse)
+      if (SetImageGray(image,&image->exception) == MagickFalse)
         {
           unsigned char
             *viff_colormap;
@@ -1149,14 +1155,12 @@ RestoreMSCWarning
           q=pixels;
           for (y=0; y < (ssize_t) image->rows; y++)
           {
-            p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-            if (p == (const Quantum *) NULL)
+            p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+            if (p == (const PixelPacket *) NULL)
               break;
+            indexes=GetVirtualIndexQueue(image);
             for (x=0; x < (ssize_t) image->columns; x++)
-            {
-              *q++=(unsigned char) GetPixelIndex(image,p);
-              p+=GetPixelChannels(image);
-            }
+              *q++=(unsigned char) GetPixelIndex(indexes+x);
             if (image->previous == (Image *) NULL)
               {
                 status=SetImageProgress(image,SaveImageTag,(MagickOffsetType) y,
@@ -1180,12 +1184,13 @@ RestoreMSCWarning
             /*
               Convert PseudoClass image to a VIFF monochrome image.
             */
-            (void) SetImageType(image,BilevelType,exception);
+            (void) SetImageType(image,BilevelType);
             for (y=0; y < (ssize_t) image->rows; y++)
             {
-              p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-              if (p == (const Quantum *) NULL)
+              p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+              if (p == (const PixelPacket *) NULL)
                 break;
+              indexes=GetVirtualIndexQueue(image);
               bit=0;
               byte=0;
               for (x=0; x < (ssize_t) image->columns; x++)
@@ -1200,7 +1205,6 @@ RestoreMSCWarning
                     bit=0;
                     byte=0;
                   }
-                p+=GetPixelChannels(image);
               }
               if (bit != 0)
                 *q++=byte >> (8-bit);
@@ -1220,13 +1224,13 @@ RestoreMSCWarning
             */
             for (y=0; y < (ssize_t) image->rows; y++)
             {
-              p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-              if (p == (const Quantum *) NULL)
+              p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+              if (p == (const PixelPacket *) NULL)
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
                 *q++=(unsigned char) ClampToQuantum(GetPixelLuma(image,p));
-                p+=GetPixelChannels(image);
+                p++;
               }
               if (image->previous == (Image *) NULL)
                 {

@@ -39,29 +39,30 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/artifact.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/draw.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/property.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
+#include "magick/studio.h"
+#include "magick/artifact.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/draw.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/module.h"
+#include "magick/pixel-accessor.h"
+#include "magick/property.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteMVGImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteMVGImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -141,13 +142,13 @@ static Image *ReadMVGImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -157,7 +158,7 @@ static Image *ReadMVGImage(const ImageInfo *image_info,ExceptionInfo *exception)
   if ((image->columns == 0) || (image->rows == 0))
     {
       char
-        primitive[MagickPathExtent];
+        primitive[MaxTextExtent];
 
       register char
         *p;
@@ -183,17 +184,21 @@ static Image *ReadMVGImage(const ImageInfo *image_info,ExceptionInfo *exception)
   if ((image->columns == 0) || (image->rows == 0))
     ThrowReaderException(OptionError,"MustSpecifyImageSize");
   draw_info=CloneDrawInfo(image_info,(DrawInfo *) NULL);
-  draw_info->affine.sx=image->resolution.x == 0.0 ? 1.0 : image->resolution.x/
+  draw_info->affine.sx=image->x_resolution == 0.0 ? 1.0 : image->x_resolution/
     DefaultResolution;
-  draw_info->affine.sy=image->resolution.y == 0.0 ? 1.0 : image->resolution.y/
+  draw_info->affine.sy=image->y_resolution == 0.0 ? 1.0 : image->y_resolution/
     DefaultResolution;
   image->columns=(size_t) (draw_info->affine.sx*image->columns);
   image->rows=(size_t) (draw_info->affine.sy*image->rows);
-  status=SetImageExtent(image,image->columns,image->rows,exception);
+  status=SetImageExtent(image,image->columns,image->rows);
   if (status == MagickFalse)
-    return(DestroyImageList(image));
-  if (SetImageBackgroundColor(image,exception) == MagickFalse)
     {
+      InheritException(exception,&image->exception);
+      return(DestroyImageList(image));
+    }
+  if (SetImageBackgroundColor(image) == MagickFalse)
+    {
+      InheritException(exception,&image->exception);
       image=DestroyImageList(image);
       return((Image *) NULL);
     }
@@ -214,7 +219,7 @@ static Image *ReadMVGImage(const ImageInfo *image_info,ExceptionInfo *exception)
      }
   if (draw_info->primitive == (char *) NULL)
     ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
-  (void) DrawImage(image,draw_info,exception);
+  (void) DrawImage(image,draw_info);
   (void) SetImageArtifact(image,"MVG",draw_info->primitive);
   draw_info=DestroyDrawInfo(draw_info);
   (void) CloseBlob(image);
@@ -249,13 +254,15 @@ ModuleExport size_t RegisterMVGImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("MVG","MVG","Magick Vector Graphics");
+  entry=SetMagickInfo("MVG");
   entry->decoder=(DecodeImageHandler *) ReadMVGImage;
   entry->encoder=(EncodeImageHandler *) WriteMVGImage;
   entry->magick=(IsImageFormatHandler *) IsMVG;
+  entry->adjoin=MagickFalse;
+  entry->seekable_stream=MagickTrue;
   entry->format_type=ImplicitFormatType;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderSeekableStreamFlag;
+  entry->description=ConstantString("Magick Vector Graphics");
+  entry->module=ConstantString("MVG");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -299,8 +306,7 @@ ModuleExport void UnregisterMVGImage(void)
 %
 %  The format of the WriteMVGImage method is:
 %
-%      MagickBooleanType WriteMVGImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%      MagickBooleanType WriteMVGImage(const ImageInfo *image_info,Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -308,11 +314,8 @@ ModuleExport void UnregisterMVGImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
-static MagickBooleanType WriteMVGImage(const ImageInfo *image_info,Image *image,
-  ExceptionInfo *exception)
+static MagickBooleanType WriteMVGImage(const ImageInfo *image_info,Image *image)
 {
   const char
     *value;
@@ -324,15 +327,15 @@ static MagickBooleanType WriteMVGImage(const ImageInfo *image_info,Image *image,
     Open output image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   value=GetImageArtifact(image,"MVG");
   if (value == (const char *) NULL)
     ThrowWriterException(OptionError,"NoImageVectorGraphics");
-  status=OpenBlob(image_info,image,WriteBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   (void) WriteBlob(image,strlen(value),(const unsigned char *) value);

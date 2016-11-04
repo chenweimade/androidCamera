@@ -39,32 +39,32 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/artifact.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/client.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/display.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/option.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/string-private.h"
-#include "MagickCore/module.h"
-#include "MagickCore/utility.h"
-#include "MagickCore/xwindow.h"
-#include "MagickCore/xwindow-private.h"
+#include "magick/studio.h"
+#include "magick/artifact.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/client.h"
+#include "magick/colorspace-private.h"
+#include "magick/display.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/memory_.h"
+#include "magick/option.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/string-private.h"
+#include "magick/module.h"
+#include "magick/utility.h"
+#include "magick/xwindow.h"
+#include "magick/xwindow-private.h"
 #if defined(MAGICKCORE_FLIF_DELEGATE)
 #include <flif.h>
 #endif
@@ -118,7 +118,7 @@ static Image *ReadFLIFImage(const ImageInfo *image_info,
   MagickBooleanType
     status;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   register ssize_t
@@ -145,13 +145,13 @@ static Image *ReadFLIFImage(const ImageInfo *image_info,
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -167,7 +167,7 @@ static Image *ReadFLIFImage(const ImageInfo *image_info,
     ThrowReaderException(CorruptImageError,"InsufficientImageDataInFile");
   flifdec=flif_create_decoder();
   if (image_info->quality != UndefinedCompressionQuality)
-    flif_decoder_set_quality(flifdec,(int32_t) image_info->quality);
+    flif_decoder_set_quality(flifdec,image_info->quality);
   if (!flif_decoder_decode_memory(flifdec,stream,length))
     {
       flif_destroy_decoder(flifdec);
@@ -190,7 +190,7 @@ static Image *ReadFLIFImage(const ImageInfo *image_info,
         /*
           Allocate next image structure.
         */
-        AcquireNextImage(image_info,image,exception);
+        AcquireNextImage(image_info,image);
         if (GetNextImageInList(image) == (Image *) NULL)
           {
             image=DestroyImageList(image);
@@ -204,8 +204,8 @@ static Image *ReadFLIFImage(const ImageInfo *image_info,
     image->columns=(size_t) flif_image_get_width(flifimage);
     image->rows=(size_t) flif_image_get_height(flifimage);
     image->depth=flif_image_get_depth(flifimage);
-    image->alpha_trait=(flif_image_get_nb_channels(flifimage) > 3 ?
-      BlendPixelTrait : UndefinedPixelTrait);
+    image->matte=(flif_image_get_nb_channels(flifimage) > 3 ?
+      MagickTrue : MagickFalse);
     image->delay=flif_image_get_frame_delay(flifimage);
     image->ticks_per_second=1000;
     image->scene=count;
@@ -215,15 +215,15 @@ static Image *ReadFLIFImage(const ImageInfo *image_info,
       flif_image_read_row_RGBA16(flifimage,y,pixels,length);
       p=pixels;
       q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-      if (q == (Quantum *) NULL)
+      if (q == (PixelPacket *) NULL)
         break;
       for (x=0; x < (ssize_t) image->columns; x++)
       {
-        SetPixelRed(image,ScaleShortToQuantum(*p++),q);
-        SetPixelGreen(image,ScaleShortToQuantum(*p++),q);
-        SetPixelBlue(image,ScaleShortToQuantum(*p++),q);
-        SetPixelAlpha(image,ScaleShortToQuantum(*p++),q);
-        q+=GetPixelChannels(image);
+        SetPixelRed(q,ScaleShortToQuantum(*p++));
+        SetPixelGreen(q,ScaleShortToQuantum(*p++));
+        SetPixelBlue(q,ScaleShortToQuantum(*p++));
+        SetPixelAlpha(q,ScaleShortToQuantum(*p++));
+        q++;
       }
       if (SyncAuthenticPixels(image,exception) == MagickFalse)
         break;
@@ -301,21 +301,24 @@ static MagickBooleanType IsFLIF(const unsigned char *magick,
 ModuleExport size_t RegisterFLIFImage(void)
 {
   char
-    version[MagickPathExtent];
+    version[MaxTextExtent];
 
   MagickInfo
     *entry;
 
   *version='\0';
-  entry=AcquireMagickInfo("FLIF","FLIF","Free Lossless Image Format");
+  entry=SetMagickInfo("FLIF");
 #if defined(MAGICKCORE_FLIF_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadFLIFImage;
   entry->encoder=(EncodeImageHandler *) WriteFLIFImage;
-  (void) FormatLocaleString(version,MagickPathExtent,"libflif %d.%d.%d [%04X]",
+  (void) FormatLocaleString(version,MaxTextExtent,"libflif %d.%d.%d [%04X]",
     (FLIF_VERSION >> 16) & 0xff,
     (FLIF_VERSION  >> 8) & 0xff,
     (FLIF_VERSION  >> 0) & 0xff,FLIF_ABI_VERSION);
 #endif
+  entry->description=ConstantString("Free Lossless Image Format");
+  entry->adjoin=MagickTrue;
+  entry->module=ConstantString("FLIF");
   entry->mime_type=ConstantString("image/flif");
   entry->magick=(IsImageFormatHandler *) IsFLIF;
   if (*version != '\0')
@@ -392,7 +395,7 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
   MagickOffsetType
     scene;
 
-  register const Quantum
+  register const PixelPacket
     *magick_restrict p;
 
   register ssize_t
@@ -419,9 +422,9 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
     *pixels;
 
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   if ((image->columns > 0xFFFF) || (image->rows > 0xFFFF))
@@ -431,7 +434,7 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
     return(status);
   flifenc=flif_create_encoder();
   if (image_info->quality != UndefinedCompressionQuality)
-    flif_encoder_set_lossy(flifenc,3*(100-(int32_t) image_info->quality));
+    flif_encoder_set_lossy(flifenc,3*(100-image_info->quality));
 
   /* relatively fast encoding */
   flif_encoder_set_learn_repeat(flifenc,1);
@@ -443,14 +446,12 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
   /* Convert image to FLIFIMAGE */
   if (image->depth > 8)
     {
-      flifimage=flif_create_image_HDR((uint32_t) image->columns,
-        (uint32_t) image->rows);
+      flifimage=flif_create_image_HDR(image->columns,image->rows);
       length=sizeof(unsigned short)*4*image->columns;
     }
   else
     {
-      flifimage=flif_create_image((uint32_t) image->columns,
-        (uint32_t) image->rows);
+      flifimage=flif_create_image(image->columns,image->rows);
       length=sizeof(unsigned char)*4*image->columns;
     }
   if (flifimage == (FLIF_IMAGE *) NULL)
@@ -472,7 +473,7 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
     for (y=0; y < (ssize_t) image->rows; y++)
     {
       p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-      if (p == (Quantum *) NULL)
+      if (p == (PixelPacket *) NULL)
         break;
 
       if (image->depth > 8)
@@ -480,14 +481,14 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
           qs=(unsigned short *) pixels;
           for (x=0; x < (ssize_t) image->columns; x++)
           {
-            *qs++=ScaleQuantumToShort(GetPixelRed(image,p));
-            *qs++=ScaleQuantumToShort(GetPixelGreen(image,p));
-            *qs++=ScaleQuantumToShort(GetPixelBlue(image,p));
-            if (image->alpha_trait != UndefinedPixelTrait)
-              *qs++=ScaleQuantumToShort(GetPixelAlpha(image,p));
+            *qs++=ScaleQuantumToShort(GetPixelRed(p));
+            *qs++=ScaleQuantumToShort(GetPixelGreen(p));
+            *qs++=ScaleQuantumToShort(GetPixelBlue(p));
+            if (image->matte != MagickFalse)
+              *qs++=ScaleQuantumToShort(GetPixelAlpha(p));
             else
               *qs++=0xFFFF;
-            p+=GetPixelChannels(image);
+            p++;
           }
           flif_image_write_row_RGBA16(flifimage,y,pixels,length);
         }
@@ -496,19 +497,19 @@ static MagickBooleanType WriteFLIFImage(const ImageInfo *image_info,
           qc=pixels;
           for (x=0; x < (ssize_t) image->columns; x++)
           {
-            *qc++=ScaleQuantumToChar(GetPixelRed(image,p));
-            *qc++=ScaleQuantumToChar(GetPixelGreen(image,p));
-            *qc++=ScaleQuantumToChar(GetPixelBlue(image,p));
-            if (image->alpha_trait != UndefinedPixelTrait)
-              *qc++=ScaleQuantumToChar(GetPixelAlpha(image,p));
+            *qc++=ScaleQuantumToChar(GetPixelRed(p));
+            *qc++=ScaleQuantumToChar(GetPixelGreen(p));
+            *qc++=ScaleQuantumToChar(GetPixelBlue(p));
+            if (image->matte != MagickFalse)
+              *qc++=ScaleQuantumToChar(GetPixelAlpha(p));
             else
               *qc++=0xFF;
-            p+=GetPixelChannels(image);
+            p++;
           }
           flif_image_write_row_RGBA8(flifimage,y,pixels,length);
         }
     }
-    flif_image_set_frame_delay(flifimage,(uint32_t) image->delay*100/
+    flif_image_set_frame_delay(flifimage,image->delay*100/
       image->ticks_per_second);
     flif_encoder_add_image(flifenc,flifimage);
     if (GetNextImageInList(image) == (Image *) NULL)

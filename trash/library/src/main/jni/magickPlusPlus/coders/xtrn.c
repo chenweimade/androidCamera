@@ -37,7 +37,7 @@
 %  This coder is a kind of backdoor used by the COM object that allows it to  %
 %  pass blobs back and forth using the coder interface. It simply encodes and %
 %  decodes the filename as a comma delimited string and extracts the info it  %
-%  needs.                                                                     %
+%  needs. The five methods of passing images are:                             %
 %
 %
 */
@@ -45,19 +45,20 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/delegate.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/MagickCore.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/string_.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/constitute.h"
+#include "magick/delegate.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/module.h"
+#include "magick/string_.h"
 #if defined(MAGICKCORE_WINDOWS_SUPPORT)
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
@@ -68,7 +69,7 @@
   Forward declarations.
 */
 static MagickBooleanType
-  WriteXTRNImage(const ImageInfo *,Image *,ExceptionInfo *exception);
+  WriteXTRNImage(const ImageInfo *,Image *);
 #endif
 
 /*
@@ -104,7 +105,7 @@ static Image *ReadXTRNImage(const ImageInfo *image_info,
 {
   char
     *blob_data,
-    filename[MagickPathExtent];
+    filename[MaxTextExtent];
 
   HRESULT
     hr;
@@ -150,19 +151,19 @@ static Image *ReadXTRNImage(const ImageInfo *image_info,
             {
               blob_length=lBoundu-lBoundl+1;
               hr=SafeArrayAccessData(pSafeArray,(void**) &blob_data);
-              if (SUCCEEDED(hr))
+              if(SUCCEEDED(hr))
                 {
                   *clone_info->filename='\0';
                   *clone_info->magick='\0';
                   if (*filename != '\0')
                     (void) CopyMagickString(clone_info->filename,filename,
-                      MagickPathExtent);
+                      MaxTextExtent);
                   image=BlobToImage(clone_info,blob_data,blob_length,
                     exception);
                   hr=SafeArrayUnaccessData(pSafeArray);
                   CatchException(exception);
                 }
-            }
+              }
         }
     }
   clone_info=DestroyImageInfo(clone_info);
@@ -198,14 +199,16 @@ ModuleExport size_t RegisterXTRNImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("XTRN","XTRNARRAY",
-    "External transfer via a smart array interface");
+  entry=SetMagickInfo("XTRNARRAY");
 #if defined(MAGICKCORE_WINDOWS_SUPPORT)
   entry->decoder=ReadXTRNImage;
   entry->encoder=WriteXTRNImage;
 #endif
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString(
+    "External transfer via a smart array interface");
+  entry->module=ConstantString("XTRN");
   RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -252,15 +255,13 @@ ModuleExport void UnregisterXTRNImage(void)
 %  The format of the WriteXTRNImage method is:
 %
 %      MagickBooleanType WriteXTRNImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%        Image *image)
 %
 %  A description of each parameter follows.
 %
 %    o image_info: Specifies a pointer to an ImageInfo structure.
 %
 %    o image:  A pointer to a Image structure.
-%
-%    o exception: return any errors or warnings in this structure.
 %
 */
 
@@ -309,10 +310,10 @@ static size_t SafeArrayFifo(const Image *image,const void *data,
 }
 
 static MagickBooleanType WriteXTRNImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
   char
-    filename[MagickPathExtent];
+    filename[MaxTextExtent];
 
   Image
     *p;
@@ -335,7 +336,7 @@ static MagickBooleanType WriteXTRNImage(const ImageInfo *image_info,
   void
     *param1;
 
-  param1 = (void *) NULL;
+  param1=(void *) NULL;
   status=MagickTrue;
   clone_info=CloneImageInfo(image_info);
   if (*clone_info->filename != '\0')
@@ -343,18 +344,17 @@ static MagickBooleanType WriteXTRNImage(const ImageInfo *image_info,
       (void) sscanf(clone_info->filename,"%p,%2048s",&param1,filename);
       image->client_data=param1;
       scene=0;
-      (void) CopyMagickString(clone_info->filename,filename,
-        MagickPathExtent);
+      (void) CopyMagickString(clone_info->filename,filename,MaxTextExtent);
       for (p=image; p != (Image *) NULL; p=GetNextImageInList(p))
       {
-        (void) CopyMagickString(p->filename,filename,MagickPathExtent);
+        (void) CopyMagickString(p->filename,filename,MaxTextExtent);
         p->scene=scene++;
       }
-      SetImageInfo(clone_info,1,exception);
+      SetImageInfo(clone_info,1,&image->exception);
       (void) CopyMagickString(image->magick,clone_info->magick,
-        MagickPathExtent);
+        MaxTextExtent);
       blob_data=ImageToBlob(clone_info,image,&blob_length,
-        exception);
+        &image->exception);
       if (blob_data == (unsigned char *) NULL)
         status=MagickFalse;
       else

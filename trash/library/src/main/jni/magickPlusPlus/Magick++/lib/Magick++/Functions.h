@@ -23,7 +23,7 @@ namespace Magick
   MagickPPExport void DisableOpenCL(void);
 
   // Enable OpenCL acceleration (only works when build with OpenCL support)
-  MagickPPExport bool EnableOpenCL(void);
+  MagickPPExport bool EnableOpenCL(const bool useCache_=true);
 
   // C library initialization routine
   MagickPPExport void InitializeMagick(const char *path_);

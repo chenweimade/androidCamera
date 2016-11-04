@@ -40,32 +40,33 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/color-private.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/geometry.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/paint.h"
-#include "MagickCore/property.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/utility.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/color-private.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/constitute.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/geometry.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/paint.h"
+#include "magick/pixel-accessor.h"
+#include "magick/property.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/utility.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteHTMLImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteHTMLImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -129,23 +130,29 @@ ModuleExport size_t RegisterHTMLImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("HTML","HTM",
-    "Hypertext Markup Language and a client-side image map");
+  entry=SetMagickInfo("HTM");
   entry->encoder=(EncodeImageHandler *) WriteHTMLImage;
   entry->magick=(IsImageFormatHandler *) IsHTML;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString(
+    "Hypertext Markup Language and a client-side image map");
+  entry->module=ConstantString("HTML");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("HTML","HTML",
-    "Hypertext Markup Language and a client-side image map");
+  entry=SetMagickInfo("HTML");
   entry->encoder=(EncodeImageHandler *) WriteHTMLImage;
   entry->magick=(IsImageFormatHandler *) IsHTML;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString(
+    "Hypertext Markup Language and a client-side image map");
+  entry->module=ConstantString("HTML");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("HTML","SHTML",
-    "Hypertext Markup Language and a client-side image map");
+  entry=SetMagickInfo("SHTML");
   entry->encoder=(EncodeImageHandler *) WriteHTMLImage;
   entry->magick=(IsImageFormatHandler *) IsHTML;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString(
+    "Hypertext Markup Language and a client-side image map");
+  entry->module=ConstantString("HTML");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -191,8 +198,7 @@ ModuleExport void UnregisterHTMLImage(void)
 %
 %  The format of the WriteHTMLImage method is:
 %
-%      MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%      MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -200,18 +206,17 @@ ModuleExport void UnregisterHTMLImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
 %
 */
 static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
   char
-    basename[MagickPathExtent],
-    buffer[MagickPathExtent],
-    filename[MagickPathExtent],
-    mapname[MagickPathExtent],
-    url[MagickPathExtent];
+    basename[MaxTextExtent],
+    buffer[MaxTextExtent],
+    filename[MaxTextExtent],
+    mapname[MaxTextExtent],
+    url[MaxTextExtent];
 
   Image
     *next;
@@ -232,19 +237,17 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
     Open image.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
-  assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   (void) CloseBlob(image);
-  (void) TransformImageColorspace(image,sRGBColorspace,exception);
+  (void) TransformImageColorspace(image,sRGBColorspace);
   *url='\0';
   if ((LocaleCompare(image_info->magick,"FTP") == 0) ||
       (LocaleCompare(image_info->magick,"HTTP") == 0))
@@ -256,23 +259,23 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
       if (p != (char *) NULL)
         {
           p++;
-          (void) CopyMagickString(url,image_info->magick,MagickPathExtent);
-          (void) ConcatenateMagickString(url,":",MagickPathExtent);
+          (void) CopyMagickString(url,image_info->magick,MaxTextExtent);
+          (void) ConcatenateMagickString(url,":",MaxTextExtent);
           url[strlen(url)+p-image->filename]='\0';
           (void) ConcatenateMagickString(url,image->filename,
             p-image->filename+2);
-          (void) CopyMagickString(image->filename,p,MagickPathExtent);
+          (void) CopyMagickString(image->filename,p,MaxTextExtent);
         }
     }
   /*
     Refer to image map file.
   */
-  (void) CopyMagickString(filename,image->filename,MagickPathExtent);
+  (void) CopyMagickString(filename,image->filename,MaxTextExtent);
   AppendImageFormat("map",filename);
   GetPathComponent(filename,BasePath,basename);
-  (void) CopyMagickString(mapname,basename,MagickPathExtent);
-  (void) CopyMagickString(image->filename,image_info->filename,MagickPathExtent);
-  (void) CopyMagickString(filename,image->filename,MagickPathExtent);
+  (void) CopyMagickString(mapname,basename,MaxTextExtent);
+  (void) CopyMagickString(image->filename,image_info->filename,MaxTextExtent);
+  (void) CopyMagickString(filename,image->filename,MaxTextExtent);
   write_info=CloneImageInfo(image_info);
   *write_info->magick='\0';
   write_info->adjoin=MagickTrue;
@@ -285,8 +288,7 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
       /*
         Open output image file.
       */
-      assert(exception != (ExceptionInfo *) NULL);
-      status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+      status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
       if (status == MagickFalse)
         return(status);
       /*
@@ -299,26 +301,26 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
         "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n");
       (void) WriteBlobString(image,"<html>\n");
       (void) WriteBlobString(image,"<head>\n");
-      value=GetImageProperty(image,"label",exception);
+      value=GetImageProperty(image,"label");
       if (value != (const char *) NULL)
-        (void) FormatLocaleString(buffer,MagickPathExtent,"<title>%s</title>\n",
+        (void) FormatLocaleString(buffer,MaxTextExtent,"<title>%s</title>\n",
           value);
       else
         {
           GetPathComponent(filename,BasePath,basename);
-          (void) FormatLocaleString(buffer,MagickPathExtent,
+          (void) FormatLocaleString(buffer,MaxTextExtent,
             "<title>%s</title>\n",basename);
         }
       (void) WriteBlobString(image,buffer);
       (void) WriteBlobString(image,"</head>\n");
       (void) WriteBlobString(image,"<body style=\"text-align: center;\">\n");
-      (void) FormatLocaleString(buffer,MagickPathExtent,"<h1>%s</h1>\n",
+      (void) FormatLocaleString(buffer,MaxTextExtent,"<h1>%s</h1>\n",
         image->filename);
       (void) WriteBlobString(image,buffer);
       (void) WriteBlobString(image,"<div>\n");
-      (void) CopyMagickString(filename,image->filename,MagickPathExtent);
+      (void) CopyMagickString(filename,image->filename,MaxTextExtent);
       AppendImageFormat("png",filename);
-      (void) FormatLocaleString(buffer,MagickPathExtent,"<img usemap=\"#%s\" "
+      (void) FormatLocaleString(buffer,MaxTextExtent,"<img usemap=\"#%s\" "
         "src=\"%s\" style=\"border: 0;\" alt=\"Image map\" />\n",mapname,
         filename);
       (void) WriteBlobString(image,buffer);
@@ -331,14 +333,14 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
       /*
         Write an image map.
       */
-      (void) FormatLocaleString(buffer,MagickPathExtent,
+      (void) FormatLocaleString(buffer,MaxTextExtent,
         "<map id=\"%s\" name=\"%s\">\n",mapname,mapname);
       (void) WriteBlobString(image,buffer);
-      (void) FormatLocaleString(buffer,MagickPathExtent,"  <area href=\"%s",url);
+      (void) FormatLocaleString(buffer,MaxTextExtent,"  <area href=\"%s",url);
       (void) WriteBlobString(image,buffer);
       if (image->directory == (char *) NULL)
         {
-          (void) FormatLocaleString(buffer,MagickPathExtent,
+          (void) FormatLocaleString(buffer,MaxTextExtent,
             "%s\" shape=\"rect\" coords=\"0,0,%.20g,%.20g\" alt=\"\" />\n",
             image->filename,(double) geometry.width-1,(double) geometry.height-
             1);
@@ -350,14 +352,14 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
             (void) WriteBlobByte(image,(unsigned char) *p);
           else
             {
-              (void) FormatLocaleString(buffer,MagickPathExtent,"\" shape="
+              (void) FormatLocaleString(buffer,MaxTextExtent,"\" shape="
                 "\"rect\" coords=\"%.20g,%.20g,%.20g,%.20g\" alt=\"\" />\n",
                 (double) geometry.x,(double) geometry.y,(double) (geometry.x+
                 geometry.width-1),(double) (geometry.y+geometry.height-1));
               (void) WriteBlobString(image,buffer);
               if (*(p+1) != '\0')
                 {
-                  (void) FormatLocaleString(buffer,MagickPathExtent,
+                  (void) FormatLocaleString(buffer,MaxTextExtent,
                     "  <area href=%s\"",url);
                   (void) WriteBlobString(image,buffer);
                 }
@@ -369,7 +371,7 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
                 }
             }
       (void) WriteBlobString(image,"</map>\n");
-      (void) CopyMagickString(filename,image->filename,MagickPathExtent);
+      (void) CopyMagickString(filename,image->filename,MaxTextExtent);
       (void) WriteBlobString(image,"</div>\n");
       (void) WriteBlobString(image,"</body>\n");
       (void) WriteBlobString(image,"</html>\n");
@@ -377,24 +379,24 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
       /*
         Write the image as PNG.
       */
-      (void) CopyMagickString(image->filename,filename,MagickPathExtent);
+      (void) CopyMagickString(image->filename,filename,MaxTextExtent);
       AppendImageFormat("png",image->filename);
       next=GetNextImageInList(image);
       image->next=NewImageList();
-      (void) CopyMagickString(image->magick,"PNG",MagickPathExtent);
-      (void) WriteImage(write_info,image,exception);
+      (void) CopyMagickString(image->magick,"PNG",MaxTextExtent);
+      (void) WriteImage(write_info,image);
       image->next=next;
       /*
         Determine image map filename.
       */
       GetPathComponent(image->filename,BasePath,filename);
-      (void) ConcatenateMagickString(filename,"_map.shtml",MagickPathExtent);
-      (void) CopyMagickString(image->filename,filename,MagickPathExtent);
+      (void) ConcatenateMagickString(filename,"_map.shtml",MaxTextExtent);
+      (void) CopyMagickString(image->filename,filename,MaxTextExtent);
     }
   /*
     Open image map.
   */
-  status=OpenBlob(write_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(write_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   write_info=DestroyImageInfo(write_info);
@@ -407,14 +409,14 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
   /*
     Write an image map.
   */
-  (void) FormatLocaleString(buffer,MagickPathExtent,
+  (void) FormatLocaleString(buffer,MaxTextExtent,
     "<map id=\"%s\" name=\"%s\">\n",mapname,mapname);
   (void) WriteBlobString(image,buffer);
-  (void) FormatLocaleString(buffer,MagickPathExtent,"  <area href=\"%s",url);
+  (void) FormatLocaleString(buffer,MaxTextExtent,"  <area href=\"%s",url);
   (void) WriteBlobString(image,buffer);
   if (image->directory == (char *) NULL)
     {
-      (void) FormatLocaleString(buffer,MagickPathExtent,
+      (void) FormatLocaleString(buffer,MaxTextExtent,
         "%s\" shape=\"rect\" coords=\"0,0,%.20g,%.20g\" alt=\"\" />\n",
         image->filename,(double) geometry.width-1,(double) geometry.height-1);
       (void) WriteBlobString(image,buffer);
@@ -425,14 +427,14 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
         (void) WriteBlobByte(image,(unsigned char) *p);
       else
         {
-          (void) FormatLocaleString(buffer,MagickPathExtent,"\" shape=\"rect\""
+          (void) FormatLocaleString(buffer,MaxTextExtent,"\" shape=\"rect\""
             " coords=\"%.20g,%.20g,%.20g,%.20g\" alt=\"\" />\n",
             (double) geometry.x,(double) geometry.y,geometry.x+(double)
             geometry.width-1,geometry.y+(double) geometry.height-1);
           (void) WriteBlobString(image,buffer);
           if (*(p+1) != '\0')
             {
-              (void) FormatLocaleString(buffer,MagickPathExtent,
+              (void) FormatLocaleString(buffer,MaxTextExtent,
                 "  <area href=%s\"",url);
               (void) WriteBlobString(image,buffer);
             }
@@ -445,6 +447,6 @@ static MagickBooleanType WriteHTMLImage(const ImageInfo *image_info,
         }
   (void) WriteBlobString(image,"</map>\n");
   (void) CloseBlob(image);
-  (void) CopyMagickString(image->filename,filename,MagickPathExtent);
+  (void) CopyMagickString(image->filename,filename,MaxTextExtent);
   return(status);
 }

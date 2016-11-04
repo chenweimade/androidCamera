@@ -10,7 +10,7 @@ MAGICKPP_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/Magick++/lib
 
 if WITH_MAGICK_PLUS_PLUS
 MAGICKPP_LIBS = Magick++/lib/libMagick++-@MAGICK_MAJOR_VERSION@.@MAGICK_ABI_SUFFIX@.la
-MAGICKPP_LDADD = $(MAGICKPP_LIBS) $(top_builddir)/MagickCore/libMagickCore-@MAGICK_MAJOR_VERSION@.@MAGICK_ABI_SUFFIX@.la
+MAGICKPP_LDADD = $(MAGICKPP_LIBS) $(top_builddir)/magick/libMagickCore-@MAGICK_MAJOR_VERSION@.@MAGICK_ABI_SUFFIX@.la
 MAGICKPP_CHECK_PGRMS = $(MAGICKPP_CHECK_PGRMS_OPT)
 MAGICKPP_MANS = $(MAGICKPP_MANS_OPT)
 MAGICKPP_PKGCONFIG = $(MAGICKPP_PKGCONFIG_OPT)
@@ -20,7 +20,7 @@ MAGICKPP_TOP_INCHEADERS = $(MAGICKPP_TOP_INCHEADERS_OPT)
 MAGICKPP_INCHEADERS = $(MAGICKPP_INCHEADERS_OPT)
 else
 MAGICKPP_LIBS = 
-MAGICKPP_LDADD =
+MAGICKPP_LDADD = 
 MAGICKPP_CHECK_PGRMS = 
 MAGICKPP_MANS = 
 MAGICKPP_PKGCONFIG = 
@@ -38,7 +38,9 @@ MAGICKPP_MANS_OPT = \
 
 MAGICKPP_PKGCONFIG_OPT = \
 	Magick++/lib/Magick++.pc \
-	Magick++/lib/Magick++-@MAGICK_MAJOR_VERSION@.@MAGICK_ABI_SUFFIX@.pc
+	Magick++/lib/ImageMagick++.pc \
+	Magick++/lib/Magick++-@MAGICK_MAJOR_VERSION@.@MAGICK_ABI_SUFFIX@.pc \
+	Magick++/lib/ImageMagick++-@MAGICK_MAJOR_VERSION@.@MAGICK_ABI_SUFFIX@.pc
 
 MAGICKPP_TEST_SCRPTS_OPT = \
 	Magick++/tests/tests.tap \
@@ -53,6 +55,7 @@ MAGICKPP_EXTRA_DIST = \
 	Magick++/README \
 	Magick++/bin/Magick++-config.1 \
 	Magick++/bin/Magick++-config.in \
+	Magick++/lib/ImageMagick++.pc.in \
 	Magick++/lib/libMagick++.map \
 	Magick++/lib/Magick++.pc.in \
 	Magick++/demo/model.miff \
@@ -73,6 +76,7 @@ MAGICKPP_CLEANFILES = \
 Magick___lib_libMagick___@MAGICK_MAJOR_VERSION@_@MAGICK_ABI_SUFFIX@_la_SOURCES = \
 	Magick++/lib/Blob.cpp \
 	Magick++/lib/BlobRef.cpp \
+	Magick++/lib/ChannelMoments.cpp \
 	Magick++/lib/CoderInfo.cpp \
 	Magick++/lib/Color.cpp \
 	Magick++/lib/Drawable.cpp \
@@ -85,13 +89,13 @@ Magick___lib_libMagick___@MAGICK_MAJOR_VERSION@_@MAGICK_ABI_SUFFIX@_la_SOURCES =
 	Magick++/lib/Options.cpp \
 	Magick++/lib/Pixels.cpp \
 	Magick++/lib/ResourceLimits.cpp \
-	Magick++/lib/Statistic.cpp \
 	Magick++/lib/STL.cpp \
 	Magick++/lib/Thread.cpp \
 	Magick++/lib/TypeMetric.cpp \
 	Magick++/lib/Magick++.h \
 	Magick++/lib/Magick++/Blob.h \
 	Magick++/lib/Magick++/BlobRef.h \
+	Magick++/lib/Magick++/ChannelMoments.h \
 	Magick++/lib/Magick++/CoderInfo.h \
 	Magick++/lib/Magick++/Color.h \
 	Magick++/lib/Magick++/Drawable.h \
@@ -105,7 +109,6 @@ Magick___lib_libMagick___@MAGICK_MAJOR_VERSION@_@MAGICK_ABI_SUFFIX@_la_SOURCES =
 	Magick++/lib/Magick++/Options.h \
 	Magick++/lib/Magick++/Pixels.h \
 	Magick++/lib/Magick++/ResourceLimits.h \
-	Magick++/lib/Magick++/Statistic.h \
 	Magick++/lib/Magick++/STL.h \
 	Magick++/lib/Magick++/Thread.h \
 	Magick++/lib/Magick++/TypeMetric.h
@@ -126,6 +129,7 @@ magickppinc_HEADERS = $(MAGICKPP_INCHEADERS)
 
 MAGICKPP_INCHEADERS_OPT = \
 	Magick++/lib/Magick++/Blob.h \
+	Magick++/lib/Magick++/ChannelMoments.h \
 	Magick++/lib/Magick++/CoderInfo.h \
 	Magick++/lib/Magick++/Color.h \
 	Magick++/lib/Magick++/Drawable.h \
@@ -137,7 +141,6 @@ MAGICKPP_INCHEADERS_OPT = \
 	Magick++/lib/Magick++/Montage.h \
 	Magick++/lib/Magick++/Pixels.h \
 	Magick++/lib/Magick++/ResourceLimits.h \
-	Magick++/lib/Magick++/Statistic.h \
 	Magick++/lib/Magick++/STL.h \
 	Magick++/lib/Magick++/TypeMetric.h
 
@@ -171,7 +174,6 @@ MAGICKPP_CHECK_PGRMS_OPT = \
 	Magick++/tests/color \
 	Magick++/tests/colorHistogram \
 	Magick++/tests/exceptions \
-	Magick++/tests/geometry \
 	Magick++/tests/montageImages \
 	Magick++/tests/morphImages \
 	Magick++/tests/readWriteBlob \
@@ -244,10 +246,6 @@ Magick___tests_colorHistogram_CPPFLAGS= $(MAGICKPP_CPPFLAGS)
 Magick___tests_exceptions_SOURCES	    = Magick++/tests/exceptions.cpp
 Magick___tests_exceptions_LDADD		    = $(MAGICKPP_LDADD)
 Magick___tests_exceptions_CPPFLAGS    = $(MAGICKPP_CPPFLAGS)
-
-Magick___tests_geometry_SOURCES	    = Magick++/tests/geometry.cpp
-Magick___tests_geometry_LDADD		    = $(MAGICKPP_LDADD)
-Magick___tests_geometry_CPPFLAGS    = $(MAGICKPP_CPPFLAGS)
 
 Magick___tests_montageImages_SOURCES	= Magick++/tests/montageImages.cpp
 Magick___tests_montageImages_LDADD	  = $(MAGICKPP_LDADD)

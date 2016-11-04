@@ -72,11 +72,12 @@ int main( int /*argc*/, char ** /*argv*/)
     montage.clear();
     montageOpts.borderColor( "green" );
     montageOpts.borderWidth( 1 );
+    montageOpts.compose( OverCompositeOp );
     montageOpts.fileName( "Montage" );
     montageOpts.frameGeometry( "6x6+3+3" );
     montageOpts.geometry("50x50+2+2>");
     montageOpts.gravity( CenterGravity );
-    montageOpts.strokeColor( "yellow" );
+    montageOpts.penColor( "yellow" );
     montageOpts.shadow( true );
     montageOpts.texture( "granite:" );
     montageOpts.tile("2x1");

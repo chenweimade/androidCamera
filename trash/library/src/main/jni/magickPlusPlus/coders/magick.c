@@ -39,22 +39,22 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/option.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/option.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
 
 /*
   Predefined ImageMagick images.
@@ -12978,8 +12978,8 @@ static const unsigned char
 typedef struct _MagickImageInfo
 {
   char
-    name[MagickPathExtent],
-    magick[MagickPathExtent];
+    name[MaxTextExtent],
+    magick[MaxTextExtent];
 
   const void
     *blob;
@@ -13003,7 +13003,7 @@ static const MagickImageInfo
   Forward declarations.
 */
 static MagickBooleanType
-  WriteMAGICKImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteMAGICKImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -13053,7 +13053,7 @@ static Image *ReadMAGICKImage(const ImageInfo *image_info,
   blob_info=CloneImageInfo(image_info);
   if (LocaleCompare(image_info->magick,"MAGICK") != 0)
     (void) CopyMagickString(blob_info->filename,image_info->magick,
-      MagickPathExtent);
+      MaxTextExtent);
   image=(Image *) NULL;
   blob=(const void *) NULL;
   extent=0;
@@ -13061,7 +13061,7 @@ static Image *ReadMAGICKImage(const ImageInfo *image_info,
     if (LocaleCompare(blob_info->filename,MagickImageList[i].name) == 0)
       {
         (void) CopyMagickString(blob_info->magick,MagickImageList[i].magick,
-          MagickPathExtent);
+          MaxTextExtent);
         blob=MagickImageList[i].blob;
         extent=MagickImageList[i].extent;
         break;
@@ -13100,50 +13100,62 @@ ModuleExport size_t RegisterMAGICKImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("MAGICK","GRANITE","Granite texture");
+  entry=SetMagickInfo("GRANITE");
   entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString("Granite texture");
+  entry->module=ConstantString("MAGICK");
   (void) RegisterMagickInfo(entry);
 
-  entry=AcquireMagickInfo("MAGICK","H",
-    "Image expressed as a 'C/C++' char array");
+  entry=SetMagickInfo("H");
   entry->encoder=(EncodeImageHandler *) WriteMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickFalse;
+  entry->description=ConstantString("Image expressed as a 'C/C++' char array");
+  entry->module=ConstantString("MAGICK");
   (void) RegisterMagickInfo(entry);
 
-  entry=AcquireMagickInfo("MAGICK","LOGO","ImageMagick Logo");
+  entry=SetMagickInfo("LOGO");
+  entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString("ImageMagick Logo");
+  entry->module=ConstantString("MAGICK");
+  (void) RegisterMagickInfo(entry);
+
+  entry=SetMagickInfo("MAGICK");
   entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
   entry->encoder=(EncodeImageHandler *) WriteMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
-  (void) RegisterMagickInfo(entry);
-
-  entry=AcquireMagickInfo("MAGICK","MAGICK",
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickFalse;
+  entry->description=ConstantString(
     "Predefined Magick Image (LOGO, ROSE, etc.); output same as 'H'");
-  entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
-  entry->encoder=(EncodeImageHandler *) WriteMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->module=ConstantString("MAGICK");
   (void) RegisterMagickInfo(entry);
 
-  entry=AcquireMagickInfo("MAGICK","NETSCAPE","Netscape 216 color cube");
+  entry=SetMagickInfo("NETSCAPE");
   entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString("Netscape 216 color cube");
+  entry->module=ConstantString("MAGICK");
   (void) RegisterMagickInfo(entry);
 
-  entry=AcquireMagickInfo("MAGICK","ROSE","70x46 Truecolor rose");
+  entry=SetMagickInfo("ROSE");
   entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString("70x46 Truecolor rose");
+  entry->module=ConstantString("MAGICK");
   (void) RegisterMagickInfo(entry);
 
-  entry=AcquireMagickInfo("MAGICK","WIZARD","ImageMagick Wizard");
+  entry=SetMagickInfo("WIZARD");
   entry->decoder=(DecodeImageHandler *) ReadMAGICKImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString("ImageMagick Wizard");
+  entry->module=ConstantString("MAGICK");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -13204,14 +13216,12 @@ ModuleExport void UnregisterMAGICKImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
 static MagickBooleanType WriteMAGICKImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
   char
-    buffer[MagickPathExtent];
+    buffer[MaxTextExtent];
 
   const char
     *value;
@@ -13241,15 +13251,15 @@ static MagickBooleanType WriteMAGICKImage(const ImageInfo *image_info,
     Write logo image.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
-  magick_image=CloneImage(image,0,0,MagickTrue,exception);
+  assert(image->signature == MagickSignature);
+  magick_image=CloneImage(image,0,0,MagickTrue,&image->exception);
   if (magick_image == (Image *) NULL)
-    ThrowWriterException(ResourceLimitError,exception->reason);
+    ThrowWriterException(ResourceLimitError,image->exception.reason);
   write_info=CloneImageInfo(image_info);
 
   /* Set output format */
@@ -13262,28 +13272,28 @@ static MagickBooleanType WriteMAGICKImage(const ImageInfo *image_info,
       (IsOptionMember("MAGICK",value) != MagickFalse))
     { /* Use default GIF or PNM */
       if (magick_image->storage_class == DirectClass)
-        (void) CopyMagickString(write_info->magick,"PNM",MagickPathExtent);
+        (void) CopyMagickString(write_info->magick,"PNM",MaxTextExtent);
       else
-        (void) CopyMagickString(write_info->magick,"GIF",MagickPathExtent);
+        (void) CopyMagickString(write_info->magick,"GIF",MaxTextExtent);
     }
   else /* Use the requested format */
-    (void) CopyMagickString(write_info->magick,value,MagickPathExtent);
+    (void) CopyMagickString(write_info->magick,value,MaxTextExtent);
 
-  blob=ImageToBlob(write_info,magick_image,&length,exception);
+  blob=ImageToBlob(write_info,magick_image,&length,&image->exception);
   magick_image=DestroyImage(magick_image);
   if (blob == (void *) NULL)
     {
       (void) DestroyImageInfo(write_info);
       return(MagickFalse);
     }
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     {
       (void) DestroyImageInfo(write_info);
       return(status);
     }
   (void) WriteBlobString(image,"/*\n");
-  (void) FormatLocaleString(buffer,MagickPathExtent,"  %s (%s).\n",
+  (void) FormatLocaleString(buffer,MaxTextExtent,"  %s (%s).\n",
     image->filename, write_info->magick);
   (void) DestroyImageInfo(write_info);
   (void) WriteBlobString(image,buffer);
@@ -13295,11 +13305,11 @@ static MagickBooleanType WriteMAGICKImage(const ImageInfo *image_info,
   p=(char *) blob;
   for (i=0; i < (ssize_t) length ; i++)
   {
-    (void) FormatLocaleString(buffer,MagickPathExtent,"0x%02X, ",*p & 0xff);
+    (void) FormatLocaleString(buffer,MaxTextExtent,"0x%02X, ",*p & 0xff);
     (void) WriteBlobString(image,buffer);
     if (((i+1) % 12) == 0)
       {
-        (void) CopyMagickString(buffer,"\n    ",MagickPathExtent);
+        (void) CopyMagickString(buffer,"\n    ",MaxTextExtent);
         (void) WriteBlobString(image,buffer);
       }
     p++;

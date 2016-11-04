@@ -39,28 +39,29 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/client.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/option.h"
-#include "MagickCore/resource_.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/utility.h"
-#include "MagickCore/xwindow-private.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/client.h"
+#include "magick/constitute.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/option.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/resource_.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/utility.h"
+#include "magick/xwindow-private.h"
 #if defined(MAGICKCORE_GVC_DELEGATE)
 #undef HAVE_CONFIG_H
 #include <gvc.h>
@@ -98,7 +99,7 @@ static GVC_t
 static Image *ReadDOTImage(const ImageInfo *image_info,ExceptionInfo *exception)
 {
   char
-    command[MagickPathExtent];
+    command[MaxTextExtent];
 
   const char
     *option;
@@ -119,22 +120,22 @@ static Image *ReadDOTImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
+  assert(exception->signature == MagickSignature);
   assert(graphic_context != (GVC_t *) NULL);
-  image=AcquireImage(image_info,exception);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     return((Image *) NULL);
   read_info=CloneImageInfo(image_info);
   SetImageInfoBlob(read_info,(void *) NULL,0);
-  (void) CopyMagickString(read_info->magick,"SVG",MagickPathExtent);
+  (void) CopyMagickString(read_info->magick,"SVG",MaxTextExtent);
   (void) AcquireUniqueFilename(read_info->filename);
-  (void) FormatLocaleString(command,MagickPathExtent,"-Tsvg -o%s %s",
+  (void) FormatLocaleString(command,MaxTextExtent,"-Tsvg -o%s %s",
     read_info->filename,image_info->filename);
 #if !defined(WITH_CGRAPH)
   graph=agread(GetBlobFileHandle(image));
@@ -194,17 +195,21 @@ ModuleExport size_t RegisterDOTImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("DOT","DOT","Graphviz");
+  entry=SetMagickInfo("DOT");
 #if defined(MAGICKCORE_GVC_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadDOTImage;
 #endif
-  entry->flags^=CoderBlobSupportFlag;
+  entry->blob_support=MagickFalse;
+  entry->description=ConstantString("Graphviz");
+  entry->module=ConstantString("DOT");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("DOT","GV","Graphviz");
+  entry=SetMagickInfo("GV");
 #if defined(MAGICKCORE_GVC_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadDOTImage;
 #endif
-  entry->flags^=CoderBlobSupportFlag;
+  entry->blob_support=MagickFalse;
+  entry->description=ConstantString("Graphviz");
+  entry->module=ConstantString("DOT");
   (void) RegisterMagickInfo(entry);
 #if defined(MAGICKCORE_GVC_DELEGATE)
   graphic_context=gvContext();

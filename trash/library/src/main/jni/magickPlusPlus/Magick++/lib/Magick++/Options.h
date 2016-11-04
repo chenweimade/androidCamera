@@ -1,7 +1,7 @@
 // This may look like C code, but it is really -*- C++ -*-
 //
 // Copyright Bob Friesenhahn, 1999, 2000, 2001, 2002, 2003
-// Copyright Dirk Lemstra 2014-2016
+// Copyright Dirk Lemstra 2014-2015
 //
 // Definition of Options
 //
@@ -38,13 +38,13 @@ namespace Magick
     // Destructor
     ~Options();
 
-    // Join images into a single multi-image file
-    void adjoin(const bool flag_);
-    bool adjoin(void) const;
+    // Remove pixel aliasing
+    void antiAlias(bool flag_);
+    bool antiAlias(void) const;
 
-    // Transparent color
-    void alphaColor(const Color &alphaColor_);
-    Color alphaColor(void) const;
+    // Join images into a single multi-image file
+    void adjoin(bool flag_);
+    bool adjoin(void) const;
 
     // Image background color
     void backgroundColor(const Color &color_);
@@ -63,34 +63,34 @@ namespace Magick
     Color boxColor(void) const;
 
     // Colors within this distance are considered equal
-    void colorFuzz(const double fuzz_);
+    void colorFuzz(double fuzz_);
     double colorFuzz(void) const;
 
     // Image colorspace scheme
-    void colorspaceType(const ColorspaceType colorspace_);
+    void colorspaceType(ColorspaceType colorspace_);
     ColorspaceType colorspaceType(void) const;
 
     // Compression type ( NoCompression, BZipCompression,
     // FaxCompression, JPEGCompression, LZWCompression,
     // RLECompression, or ZipCompression )
-    void compressType(const CompressionType compressType_);
+    void compressType(CompressionType compressType_);
     CompressionType compressType(void) const;
 
     // Enable printing of debug messages from ImageMagick
-    void debug(const bool flag_);
+    void debug(bool flag_);
     bool debug(void) const;
 
     // Vertical and horizontal resolution in pixels of the image
-    void density(const Point &density_);
-    Point density(void) const;
+    void density(const Geometry &geomery_);
+    Geometry density(void) const;
 
     // Image depth (8 or 16)
-    void depth(const size_t depth_);
+    void depth(size_t depth_);
     size_t depth(void) const;
 
     // Endianness (little like Intel or big like SPARC) for image
     // formats which support endian-specific options.
-    void endian(const EndianType endian_);
+    void endian(EndianType endian_);
     EndianType endian(void) const;
 
     // Image filename to read or write
@@ -122,7 +122,7 @@ namespace Magick
     std::string fontFamily(void) const;
 
     // Font point size
-    void fontPointsize(const double pointSize_);
+    void fontPointsize(double pointSize_);
     double fontPointsize(void) const;
 
     // Font style
@@ -136,15 +136,19 @@ namespace Magick
     std::string format(void) const;
 
     // Image interlace scheme
-    void interlaceType(const InterlaceType interlace_);
+    void interlaceType(InterlaceType interlace_);
     InterlaceType interlaceType(void) const;
 
    // Image format to write or read
     void magick(const std::string &magick_);
     std::string magick(void) const;
 
+    // Transparent color
+    void matteColor(const Color &matteColor_);
+    Color matteColor(void) const;
+
    // Write as a monochrome image
-    void monochrome(const bool monochromeFlag_);
+    void monochrome(bool monochromeFlag_);
     bool monochrome(void) const;
 
     // Preferred size and location of an image canvas.
@@ -152,27 +156,27 @@ namespace Magick
     Geometry page(void) const;
 
     // Desired image quality factor
-    void quality(const size_t quality_);
+    void quality(size_t quality_);
     size_t quality(void) const;
 
     // Maximum number of colors to quantize to
-    void quantizeColors(const size_t colors_);
+    void quantizeColors(size_t colors_);
     size_t quantizeColors(void) const;
 
     // Colorspace to quantize in.
-    void quantizeColorSpace(const ColorspaceType colorSpace_);
+    void quantizeColorSpace(ColorspaceType colorSpace_);
     ColorspaceType quantizeColorSpace(void) const;
 
     // Dither image during quantization.
-    void quantizeDither(const bool ditherFlag_);
+    void quantizeDither(bool ditherFlag_);
     bool quantizeDither(void) const;
 
     // Dither method
-    void quantizeDitherMethod(const DitherMethod ditherMethod_);
+    void quantizeDitherMethod(DitherMethod ditherMethod_);
     DitherMethod quantizeDitherMethod(void) const;
 
     // Quantization tree-depth
-    void quantizeTreeDepth(const size_t treeDepth_);
+    void quantizeTreeDepth(size_t treeDepth_);
     size_t quantizeTreeDepth(void) const;
 
     // Suppress all warning messages. Error messages are still reported.
@@ -180,7 +184,7 @@ namespace Magick
     bool quiet(void) const;
 
     // Units of resolution to interpret density
-    void resolutionUnits(const ResolutionType resolutionUnits_);
+    void resolutionUnits(ResolutionType resolutionUnits_);
     ResolutionType resolutionUnits(void) const;
 
     // Image sampling factor
@@ -192,7 +196,7 @@ namespace Magick
     Geometry size(void) const;
 
     // enabled/disable stroke anti-aliasing
-    void strokeAntiAlias(const bool flag_);
+    void strokeAntiAlias(bool flag_);
     bool strokeAntiAlias(void) const ;
 
     // Color to use when drawing object outlines
@@ -209,19 +213,19 @@ namespace Magick
 
     // While drawing using strokeDashArray, specify distance into the dash
     // pattern to start the dash (default 0).
-    void strokeDashOffset(const double strokeDashOffset_);
+    void strokeDashOffset(double strokeDashOffset_);
     double strokeDashOffset(void) const;
 
     // Specify the shape to be used at the end of open subpaths when
     // they are stroked. Values of LineCap are UndefinedCap, ButtCap,
     // RoundCap, and SquareCap.
-    void strokeLineCap(const LineCap lineCap_);
+    void strokeLineCap(LineCap lineCap_);
     LineCap strokeLineCap(void) const;
 
     // Specify the shape to be used at the corners of paths (or other
     // vector shapes) when they are stroked. Values of LineJoin are
     // UndefinedJoin, MiterJoin, RoundJoin, and BevelJoin.
-    void strokeLineJoin(const LineJoin lineJoin_);
+    void strokeLineJoin(LineJoin lineJoin_);
     LineJoin strokeLineJoin(void) const;
 
     // Specify miter limit. When two line segments meet at a sharp
@@ -230,7 +234,7 @@ namespace Magick
     // the line stroking the path. The miterLimit' imposes a limit on
     // the ratio of the miter length to the 'stroke_width'. The default
     // value of this parameter is 4.
-    void strokeMiterLimit(const size_t miterLimit_);
+    void strokeMiterLimit(size_t miterLimit_);
     size_t strokeMiterLimit(void) const;
 
     // Pattern image to use for stroked outlines
@@ -238,22 +242,18 @@ namespace Magick
     const MagickCore::Image *strokePattern(void) const;
 
    // Stroke width for drawing vector objects (default one)
-    void strokeWidth(const double strokeWidth_);
+    void strokeWidth(double strokeWidth_);
     double strokeWidth(void) const;
 
-    void subImage(const size_t subImage_);
+    void subImage(size_t subImage_);
     size_t subImage(void) const;
 
     // Sub-frame number to return
-    void subRange(const size_t subRange_);
+    void subRange(size_t subRange_);
     size_t subRange(void) const;
 
-    // Remove pixel aliasing
-    void textAntiAlias(const bool flag_);
-    bool textAntiAlias(void) const;
-
     // Render text right-to-left or left-to-right.
-    void textDirection(const DirectionType direction_);
+    void textDirection(DirectionType direction_);
     DirectionType textDirection() const;
 
     // Annotation text encoding (e.g. "UTF-16")
@@ -261,50 +261,60 @@ namespace Magick
     std::string textEncoding(void) const;
 
     // Text gravity.
-    void textGravity(const GravityType gravity_);
+    void textGravity(GravityType gravity_);
     GravityType textGravity() const;
 
     // Text inter-line spacing
-    void textInterlineSpacing(const double spacing_);
+    void textInterlineSpacing(double spacing_);
     double textInterlineSpacing(void) const;
 
     // Text inter-word spacing
-    void textInterwordSpacing(const double spacing_);
+    void textInterwordSpacing(double spacing_);
     double textInterwordSpacing(void) const;
 
     // Text inter-character kerning
-    void textKerning(const double kerning_);
+    void textKerning(double kerning_);
     double textKerning(void) const;
 
     // Text undercolor box
     void textUnderColor(const Color &underColor_);
     Color textUnderColor(void) const;
 
+    void tileName(const std::string &tileName_);
+    std::string tileName(void) const;
+
     // Origin of coordinate system to use when annotating with text or drawing
-    void transformOrigin(const double tx_,const double ty_);
+    void transformOrigin(double tx_,double ty_);
 
     // Reset transformation parameters to default
     void transformReset(void);
 
     // Rotation to use when annotating with text or drawing
-    void transformRotation(const double angle_);
+    void transformRotation(double angle_);
 
     // Scale to use when annotating with text or drawing
-    void transformScale(const double sx_,const double sy_);
+    void transformScale(double sx_,double sy_);
 
     // Skew to use in X axis when annotating with text or drawing
-    void transformSkewX(const double skewx_);
+    void transformSkewX(double skewx_);
 
     // Skew to use in Y axis when annotating with text or drawing
-    void transformSkewY(const double skewy_);
+    void transformSkewY(double skewy_);
 
     // Image representation type
     void type(const ImageType type_);
     ImageType type(void) const;
 
     // Return verbose information about an image, or an operation
-    void verbose(const bool verboseFlag_);
+    void verbose(bool verboseFlag_);
     bool verbose(void) const;
+
+    void view(const std::string &view_);
+    std::string view(void) const;
+
+    // Virtual pixel method.
+    void virtualPixelMethod(VirtualPixelMethod virtual_pixel_method_);
+    VirtualPixelMethod virtualPixelMethod(void) const;
 
     // X11 display name
     void x11Display(const std::string &display_);

@@ -39,36 +39,37 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/channel.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/statistic.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/utility.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/channel.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/constitute.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/pixel-private.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/statistic.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/utility.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteBGRImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteBGRImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -133,13 +134,13 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   if ((image->columns == 0) || (image->rows == 0))
     ThrowReaderException(OptionError,"MustSpecifyImageSize");
   if (image_info->interlace != PartitionInterlace)
@@ -150,7 +151,7 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           image=DestroyImageList(image);
           return((Image *) NULL);
         }
-      if (DiscardBlobBytes(image,image->offset) == MagickFalse)
+      if (DiscardBlobBytes(image,(MagickSizeType) image->offset) == MagickFalse)
         ThrowFileException(exception,CorruptImageError,"UnexpectedEndOfFile",
           image->filename);
     }
@@ -159,8 +160,7 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
   */
   canvas_image=CloneImage(image,image->extract_info.width,1,MagickFalse,
     exception);
-  (void) SetImageVirtualPixelMethod(canvas_image,BlackVirtualPixelMethod,
-    exception);
+  (void) SetImageVirtualPixelMethod(canvas_image,BlackVirtualPixelMethod);
   quantum_info=AcquireQuantumInfo(image_info,canvas_image);
   if (quantum_info == (QuantumInfo *) NULL)
     ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
@@ -168,14 +168,12 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
   if (LocaleCompare(image_info->magick,"BGRA") == 0)
     {
       quantum_type=BGRAQuantum;
-      image->alpha_trait=BlendPixelTrait;
-      canvas_image->alpha_trait=BlendPixelTrait;
+      image->matte=MagickTrue;
     }
   if (LocaleCompare(image_info->magick,"BGRO") == 0)
     {
       quantum_type=BGROQuantum;
-      image->alpha_trait=BlendPixelTrait;
-      canvas_image->alpha_trait=BlendPixelTrait;
+      image->matte=MagickTrue;
     }
   pixels=(const unsigned char *) NULL;
   if (image_info->number_scenes != 0)
@@ -205,9 +203,12 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
     if ((image_info->ping != MagickFalse) && (image_info->number_scenes != 0))
       if (image->scene >= (image_info->scene+image_info->number_scenes-1))
         break;
-    status=SetImageExtent(image,image->columns,image->rows,exception);
+    status=SetImageExtent(image,image->columns,image->rows);
     if (status == MagickFalse)
-      return(DestroyImageList(image));
+      {
+        InheritException(exception,&image->exception);
+        return(DestroyImageList(image));
+      }
     switch (image_info->interlace)
     {
       case NoInterlace:
@@ -224,10 +225,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           }
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -241,32 +242,32 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,quantum_type,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=QueueAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelRed(image,GetPixelRed(canvas_image,p),q);
-                SetPixelGreen(image,GetPixelGreen(canvas_image,p),q);
-                SetPixelBlue(image,GetPixelBlue(canvas_image,p),q);
-                SetPixelAlpha(image,OpaqueAlpha,q);
-                if (image->alpha_trait != UndefinedPixelTrait)
-                  SetPixelAlpha(image,GetPixelAlpha(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelRed(q,GetPixelRed(p));
+                SetPixelGreen(q,GetPixelGreen(p));
+                SetPixelBlue(q,GetPixelBlue(p));
+                SetPixelOpacity(q,OpaqueOpacity);
+                if (image->matte != MagickFalse)
+                  SetPixelOpacity(q,GetPixelOpacity(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -305,10 +306,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           }
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -320,26 +321,26 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
                 "UnexpectedEndOfFile",image->filename);
               break;
             }
-          for (i=0; i < (ssize_t) (image->alpha_trait != UndefinedPixelTrait ? 4 : 3); i++)
+          for (i=0; i < (ssize_t) (image->matte != MagickFalse ? 4 : 3); i++)
           {
             quantum_type=quantum_types[i];
             q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
               exception);
-            if (q == (Quantum *) NULL)
+            if (q == (PixelPacket *) NULL)
               break;
             length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
               quantum_info,quantum_type,pixels,exception);
             if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
               break;
-            if (((y-image->extract_info.y) >= 0) && 
+            if (((y-image->extract_info.y) >= 0) &&
                 ((y-image->extract_info.y) < (ssize_t) image->rows))
               {
                 p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                   canvas_image->columns,1,exception);
                 q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                   image->columns,1,exception);
-                if ((p == (const Quantum *) NULL) ||
-                    (q == (Quantum *) NULL))
+                if ((p == (const PixelPacket *) NULL) ||
+                    (q == (PixelPacket *) NULL))
                   break;
                 for (x=0; x < (ssize_t) image->columns; x++)
                 {
@@ -347,34 +348,34 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
                   {
                     case RedQuantum:
                     {
-                      SetPixelRed(image,GetPixelRed(canvas_image,p),q);
+                      SetPixelRed(q,GetPixelRed(p));
                       break;
                     }
                     case GreenQuantum:
                     {
-                      SetPixelGreen(image,GetPixelGreen(canvas_image,p),q);
+                      SetPixelGreen(q,GetPixelGreen(p));
                       break;
                     }
                     case BlueQuantum:
                     {
-                      SetPixelBlue(image,GetPixelBlue(canvas_image,p),q);
+                      SetPixelBlue(q,GetPixelBlue(p));
                       break;
                     }
                     case OpacityQuantum:
                     {
-                      SetPixelAlpha(image,GetPixelAlpha(canvas_image,p),q);
+                      SetPixelOpacity(q,GetPixelOpacity(p));
                       break;
                     }
                     case AlphaQuantum:
                     {
-                      SetPixelAlpha(image,GetPixelAlpha(canvas_image,p),q);
+                      SetPixelAlpha(q,GetPixelAlpha(p));
                       break;
                     }
                     default:
                       break;
                   }
-                  p+=GetPixelChannels(canvas_image);
-                  q+=GetPixelChannels(image);
+                  p++;
+                  q++;
                 }
                 if (SyncAuthenticPixels(image,exception) == MagickFalse)
                   break;
@@ -405,10 +406,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           }
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -422,27 +423,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,RedQuantum,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelRed(image,GetPixelRed(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelRed(q,GetPixelRed(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -458,10 +459,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           }
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -475,27 +476,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,GreenQuantum,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelGreen(image,GetPixelGreen(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelGreen(q,GetPixelGreen(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -511,10 +512,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           }
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -528,27 +529,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,BlueQuantum,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelBlue(image,GetPixelBlue(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelBlue(q,GetPixelBlue(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -568,14 +569,14 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             if (status == MagickFalse)
               break;
           }
-        if (image->alpha_trait != UndefinedPixelTrait)
+        if (image->matte != MagickFalse)
           {
             for (y=0; y < (ssize_t) image->extract_info.height; y++)
             {
-              register const Quantum
+              register const PixelPacket
                 *magick_restrict p;
 
-              register Quantum
+              register PixelPacket
                 *magick_restrict q;
 
               register ssize_t
@@ -589,28 +590,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
                 }
               q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
                 exception);
-              if (q == (Quantum *) NULL)
+              if (q == (PixelPacket *) NULL)
                 break;
               length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
                 quantum_info,AlphaQuantum,pixels,exception);
               if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
                 break;
-              if (((y-image->extract_info.y) >= 0) && 
+              if (((y-image->extract_info.y) >= 0) &&
                   ((y-image->extract_info.y) < (ssize_t) image->rows))
                 {
-                  p=GetVirtualPixels(canvas_image,
-                    canvas_image->extract_info.x,0,canvas_image->columns,1,
-                    exception);
+                  p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,
+                    0,canvas_image->columns,1,exception);
                   q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                     image->columns,1,exception);
-                  if ((p == (const Quantum *) NULL) ||
-                      (q == (Quantum *) NULL))
+                  if ((p == (const PixelPacket *) NULL) ||
+                      (q == (PixelPacket *) NULL))
                     break;
                   for (x=0; x < (ssize_t) image->columns; x++)
                   {
-                    SetPixelAlpha(image,GetPixelAlpha(canvas_image,p),q);
-                    p+=GetPixelChannels(canvas_image);
-                    q+=GetPixelChannels(image);
+                    SetPixelOpacity(q,GetPixelOpacity(p));
+                    p++;
+                    q++;
                   }
                   if (SyncAuthenticPixels(image,exception) == MagickFalse)
                     break;
@@ -646,30 +646,30 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             image=DestroyImageList(image);
             return((Image *) NULL);
           }
-        if (DiscardBlobBytes(image,image->offset) == MagickFalse)
+        if (DiscardBlobBytes(image,(MagickSizeType) image->offset) == MagickFalse)
           ThrowFileException(exception,CorruptImageError,"UnexpectedEndOfFile",
             image->filename);
         length=GetQuantumExtent(canvas_image,quantum_info,BlueQuantum);
         for (i=0; i < (ssize_t) scene; i++)
           for (y=0; y < (ssize_t) image->extract_info.height; y++)
           {
-            pixels=(const unsigned char *) ReadBlobStream(image,length,
-              GetQuantumPixels(quantum_info),&count);
+            (void) ReadBlobStream(image,length,GetQuantumPixels(quantum_info),
+              &count);
             if (count != (ssize_t) length)
               {
                 ThrowFileException(exception,CorruptImageError,
                   "UnexpectedEndOfFile",image->filename);
                 break;
               }
-          }
+           }
         pixels=(const unsigned char *) ReadBlobStream(image,length,
           GetQuantumPixels(quantum_info),&count);
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -683,27 +683,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,BlueQuantum,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelRed(image,GetPixelRed(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelRed(q,GetPixelRed(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -730,8 +730,8 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
         for (i=0; i < (ssize_t) scene; i++)
           for (y=0; y < (ssize_t) image->extract_info.height; y++)
           {
-            pixels=(const unsigned char *) ReadBlobStream(image,length,
-              GetQuantumPixels(quantum_info),&count);
+            (void) ReadBlobStream(image,length,GetQuantumPixels(quantum_info),
+              &count);
             if (count != (ssize_t) length)
               {
                 ThrowFileException(exception,CorruptImageError,
@@ -743,10 +743,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           GetQuantumPixels(quantum_info),&count);
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -760,27 +760,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,GreenQuantum,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelGreen(image,GetPixelGreen(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelGreen(q,GetPixelGreen(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -807,8 +807,8 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
         for (i=0; i < (ssize_t) scene; i++)
           for (y=0; y < (ssize_t) image->extract_info.height; y++)
           {
-            pixels=(const unsigned char *) ReadBlobStream(image,length,
-              GetQuantumPixels(quantum_info),&count);
+            (void) ReadBlobStream(image,length,GetQuantumPixels(quantum_info),
+              &count);
             if (count != (ssize_t) length)
               {
                 ThrowFileException(exception,CorruptImageError,
@@ -820,10 +820,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
           GetQuantumPixels(quantum_info),&count);
         for (y=0; y < (ssize_t) image->extract_info.height; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          register Quantum
+          register PixelPacket
             *magick_restrict q;
 
           register ssize_t
@@ -837,27 +837,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             }
           q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
             exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
             quantum_info,RedQuantum,pixels,exception);
           if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
             break;
-          if (((y-image->extract_info.y) >= 0) && 
+          if (((y-image->extract_info.y) >= 0) &&
               ((y-image->extract_info.y) < (ssize_t) image->rows))
             {
               p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,0,
                 canvas_image->columns,1,exception);
               q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                 image->columns,1,exception);
-              if ((p == (const Quantum *) NULL) ||
-                  (q == (Quantum *) NULL))
+              if ((p == (const PixelPacket *) NULL) ||
+                  (q == (PixelPacket *) NULL))
                 break;
               for (x=0; x < (ssize_t) image->columns; x++)
               {
-                SetPixelBlue(image,GetPixelBlue(canvas_image,p),q);
-                p+=GetPixelChannels(canvas_image);
-                q+=GetPixelChannels(image);
+                SetPixelBlue(q,GetPixelBlue(p));
+                p++;
+                q++;
               }
               if (SyncAuthenticPixels(image,exception) == MagickFalse)
                 break;
@@ -871,7 +871,7 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             if (status == MagickFalse)
               break;
           }
-        if (image->alpha_trait != UndefinedPixelTrait)
+        if (image->matte != MagickFalse)
           {
             (void) CloseBlob(image);
             AppendImageFormat("A",image->filename);
@@ -886,8 +886,8 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
             for (i=0; i < (ssize_t) scene; i++)
               for (y=0; y < (ssize_t) image->extract_info.height; y++)
               {
-                pixels=(const unsigned char *) ReadBlobStream(image,length,
-                  GetQuantumPixels(quantum_info),&count);
+                (void) ReadBlobStream(image,length,GetQuantumPixels(quantum_info),
+                  &count);
                 if (count != (ssize_t) length)
                   {
                     ThrowFileException(exception,CorruptImageError,
@@ -899,10 +899,10 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
               GetQuantumPixels(quantum_info),&count);
             for (y=0; y < (ssize_t) image->extract_info.height; y++)
             {
-              register const Quantum
+              register const PixelPacket
                 *magick_restrict p;
 
-              register Quantum
+              register PixelPacket
                 *magick_restrict q;
 
               register ssize_t
@@ -916,27 +916,27 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
                 }
               q=GetAuthenticPixels(canvas_image,0,0,canvas_image->columns,1,
                 exception);
-              if (q == (Quantum *) NULL)
+              if (q == (PixelPacket *) NULL)
                 break;
               length=ImportQuantumPixels(canvas_image,(CacheView *) NULL,
                 quantum_info,BlueQuantum,pixels,exception);
               if (SyncAuthenticPixels(canvas_image,exception) == MagickFalse)
                 break;
-              if (((y-image->extract_info.y) >= 0) && 
+              if (((y-image->extract_info.y) >= 0) &&
                   ((y-image->extract_info.y) < (ssize_t) image->rows))
                 {
                   p=GetVirtualPixels(canvas_image,canvas_image->extract_info.x,
                     0,canvas_image->columns,1,exception);
                   q=GetAuthenticPixels(image,0,y-image->extract_info.y,
                     image->columns,1,exception);
-                  if ((p == (const Quantum *) NULL) ||
-                      (q == (Quantum *) NULL))
+                  if ((p == (const PixelPacket *) NULL) ||
+                      (q == (PixelPacket *) NULL))
                     break;
                   for (x=0; x < (ssize_t) image->columns; x++)
                   {
-                    SetPixelAlpha(image,GetPixelAlpha(canvas_image,p),q);
-                    p+=GetPixelChannels(canvas_image);
-                    q+=GetPixelChannels(image);
+                    SetPixelOpacity(q,GetPixelOpacity(p));
+                    p++;
+                    q++;
                   }
                   if (SyncAuthenticPixels(image,exception) == MagickFalse)
                     break;
@@ -973,7 +973,7 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
         /*
           Allocate next image structure.
         */
-        AcquireNextImage(image_info,image,exception);
+        AcquireNextImage(image_info,image);
         if (GetNextImageInList(image) == (Image *) NULL)
           {
             image=DestroyImageList(image);
@@ -988,6 +988,7 @@ static Image *ReadBGRImage(const ImageInfo *image_info,
     scene++;
   } while (count == (ssize_t) length);
   quantum_info=DestroyQuantumInfo(quantum_info);
+  InheritException(&image->exception,&canvas_image->exception);
   canvas_image=DestroyImage(canvas_image);
   (void) CloseBlob(image);
   return(GetFirstImageInList(image));
@@ -1021,25 +1022,29 @@ ModuleExport size_t RegisterBGRImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("BGR","BGR","Raw blue, green, and red samples");
+  entry=SetMagickInfo("BGR");
   entry->decoder=(DecodeImageHandler *) ReadBGRImage;
   entry->encoder=(EncodeImageHandler *) WriteBGRImage;
-  entry->flags|=CoderRawSupportFlag;
-  entry->flags|=CoderEndianSupportFlag;
+  entry->raw=MagickTrue;
+  entry->endian_support=MagickTrue;
+  entry->description=ConstantString("Raw blue, green, and red samples");
+  entry->module=ConstantString("BGR");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("BGR","BGRA",
-    "Raw blue, green, red, and alpha samples");
+  entry=SetMagickInfo("BGRA");
   entry->decoder=(DecodeImageHandler *) ReadBGRImage;
   entry->encoder=(EncodeImageHandler *) WriteBGRImage;
-  entry->flags|=CoderRawSupportFlag;
-  entry->flags|=CoderEndianSupportFlag;
+  entry->raw=MagickTrue;
+  entry->endian_support=MagickTrue;
+  entry->description=ConstantString("Raw blue, green, red, and alpha samples");
+  entry->module=ConstantString("BGR");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("BGR","BGRO",
-    "Raw blue, green, red, and opacity samples");
+  entry=SetMagickInfo("BGRO");
   entry->decoder=(DecodeImageHandler *) ReadBGRImage;
   entry->encoder=(EncodeImageHandler *) WriteBGRImage;
-  entry->flags|=CoderRawSupportFlag;
-  entry->flags|=CoderEndianSupportFlag;
+  entry->raw=MagickTrue;
+  entry->endian_support=MagickTrue;
+  entry->description=ConstantString("Raw blue, green, red, and opacity samples");
+  entry->module=ConstantString("BGR");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -1086,7 +1091,7 @@ ModuleExport void UnregisterBGRImage(void)
 %  The format of the WriteBGRImage method is:
 %
 %      MagickBooleanType WriteBGRImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%        Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -1094,11 +1099,8 @@ ModuleExport void UnregisterBGRImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
-static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
-  ExceptionInfo *exception)
+static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image)
 {
   MagickBooleanType
     status;
@@ -1126,9 +1128,9 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
     Allocate memory for pixels.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   if (image_info->interlace != PartitionInterlace)
@@ -1136,9 +1138,7 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
       /*
         Open output image file.
       */
-      assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+      status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
       if (status == MagickFalse)
         return(status);
     }
@@ -1146,7 +1146,7 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
   if (LocaleCompare(image_info->magick,"BGRA") == 0)
     {
       quantum_type=BGRAQuantum;
-      image->alpha_trait=BlendPixelTrait;
+      image->matte=MagickTrue;
     }
   scene=0;
   do
@@ -1154,14 +1154,14 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
     /*
       Convert MIFF to BGR raster pixels.
     */
-    (void) TransformImageColorspace(image,sRGBColorspace,exception);
+    (void) TransformImageColorspace(image,sRGBColorspace);
     if ((LocaleCompare(image_info->magick,"BGRA") == 0) &&
-        (image->alpha_trait == UndefinedPixelTrait))
-      (void) SetImageAlphaChannel(image,OpaqueAlphaChannel,exception);
+        (image->matte == MagickFalse))
+      (void) SetImageAlphaChannel(image,ResetAlphaChannel);
     quantum_info=AcquireQuantumInfo(image_info,image);
     if (quantum_info == (QuantumInfo *) NULL)
       ThrowWriterException(ResourceLimitError,"MemoryAllocationFailed");
-    pixels=(unsigned char *) GetQuantumPixels(quantum_info);
+    pixels=GetQuantumPixels(quantum_info);
     switch (image_info->interlace)
     {
       case NoInterlace:
@@ -1172,14 +1172,14 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
         */
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            quantum_type,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,quantum_type,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1200,31 +1200,31 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
         */
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            BlueQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,BlueQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            GreenQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,GreenQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            RedQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,RedQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
           if (quantum_type == BGRAQuantum)
             {
-              length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-                AlphaQuantum,pixels,exception);
+              length=ExportQuantumPixels(image,(const CacheView *) NULL,
+                quantum_info,AlphaQuantum,pixels,&image->exception);
               count=WriteBlob(image,length,pixels);
               if (count != (ssize_t) length)
                 break;
@@ -1246,14 +1246,14 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
         */
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            RedQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,RedQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1266,14 +1266,14 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
           }
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            GreenQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,GreenQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1286,14 +1286,14 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
           }
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            BlueQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,BlueQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1308,14 +1308,14 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
           {
             for (y=0; y < (ssize_t) image->rows; y++)
             {
-              register const Quantum
+              register const PixelPacket
                 *magick_restrict p;
 
-              p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-              if (p == (const Quantum *) NULL)
+              p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+              if (p == (const PixelPacket *) NULL)
                 break;
-              length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-                AlphaQuantum,pixels,exception);
+              length=ExportQuantumPixels(image,(const CacheView *) NULL,
+                quantum_info,AlphaQuantum,pixels,&image->exception);
               count=WriteBlob(image,length,pixels);
               if (count != (ssize_t) length)
               break;
@@ -1329,7 +1329,7 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
           }
         if (image_info->interlace == PartitionInterlace)
           (void) CopyMagickString(image->filename,image_info->filename,
-            MagickPathExtent);
+            MaxTextExtent);
         if (image->previous == (Image *) NULL)
           {
             status=SetImageProgress(image,SaveImageTag,6,6);
@@ -1345,19 +1345,19 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
         */
         AppendImageFormat("B",image->filename);
         status=OpenBlob(image_info,image,scene == 0 ? WriteBinaryBlobMode :
-          AppendBinaryBlobMode,exception);
+          AppendBinaryBlobMode,&image->exception);
         if (status == MagickFalse)
           return(status);
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            BlueQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,BlueQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1371,19 +1371,19 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
         (void) CloseBlob(image);
         AppendImageFormat("G",image->filename);
         status=OpenBlob(image_info,image,scene == 0 ? WriteBinaryBlobMode :
-          AppendBinaryBlobMode,exception);
+          AppendBinaryBlobMode,&image->exception);
         if (status == MagickFalse)
           return(status);
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            GreenQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,GreenQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1397,19 +1397,19 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
         (void) CloseBlob(image);
         AppendImageFormat("R",image->filename);
         status=OpenBlob(image_info,image,scene == 0 ? WriteBinaryBlobMode :
-          AppendBinaryBlobMode,exception);
+          AppendBinaryBlobMode,&image->exception);
         if (status == MagickFalse)
           return(status);
         for (y=0; y < (ssize_t) image->rows; y++)
         {
-          register const Quantum
+          register const PixelPacket
             *magick_restrict p;
 
-          p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-          if (p == (const Quantum *) NULL)
+          p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+          if (p == (const PixelPacket *) NULL)
             break;
-          length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-            RedQuantum,pixels,exception);
+          length=ExportQuantumPixels(image,(const CacheView *) NULL,
+            quantum_info,RedQuantum,pixels,&image->exception);
           count=WriteBlob(image,length,pixels);
           if (count != (ssize_t) length)
             break;
@@ -1426,19 +1426,20 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
             (void) CloseBlob(image);
             AppendImageFormat("A",image->filename);
             status=OpenBlob(image_info,image,scene == 0 ? WriteBinaryBlobMode :
-              AppendBinaryBlobMode,exception);
+              AppendBinaryBlobMode,&image->exception);
             if (status == MagickFalse)
               return(status);
             for (y=0; y < (ssize_t) image->rows; y++)
             {
-              register const Quantum
+              register const PixelPacket
                 *magick_restrict p;
 
-              p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-              if (p == (const Quantum *) NULL)
+              p=GetVirtualPixels(image,0,y,image->columns,1,
+                &image->exception);
+              if (p == (const PixelPacket *) NULL)
                 break;
-              length=ExportQuantumPixels(image,(CacheView *) NULL,quantum_info,
-                AlphaQuantum,pixels,exception);
+              length=ExportQuantumPixels(image,(const CacheView *) NULL,
+                quantum_info,AlphaQuantum,pixels,&image->exception);
               count=WriteBlob(image,length,pixels);
               if (count != (ssize_t) length)
                 break;
@@ -1452,7 +1453,7 @@ static MagickBooleanType WriteBGRImage(const ImageInfo *image_info,Image *image,
           }
         (void) CloseBlob(image);
         (void) CopyMagickString(image->filename,image_info->filename,
-          MagickPathExtent);
+          MaxTextExtent);
         if (image->previous == (Image *) NULL)
           {
             status=SetImageProgress(image,SaveImageTag,6,6);

@@ -42,36 +42,37 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/property.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/client.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/decorate.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/gem.h"
-#include "MagickCore/geometry.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/montage.h"
-#include "MagickCore/resize.h"
-#include "MagickCore/shear.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/resource_.h"
-#include "MagickCore/transform.h"
-#include "MagickCore/utility.h"
+#include "magick/studio.h"
+#include "magick/property.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/client.h"
+#include "magick/colorspace.h"
+#include "magick/constitute.h"
+#include "magick/decorate.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/gem.h"
+#include "magick/geometry.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/montage.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/resize.h"
+#include "magick/shear.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/resource_.h"
+#include "magick/transform.h"
+#include "magick/utility.h"
 
 /*
   Typedef declarations.
@@ -421,7 +422,7 @@ static MagickBooleanType IsPES(const unsigned char *magick,const size_t length)
 static Image *ReadPESImage(const ImageInfo *image_info,ExceptionInfo *exception)
 {
   char
-    filename[MagickPathExtent];
+    filename[MaxTextExtent];
 
   FILE
     *file;
@@ -472,13 +473,13 @@ static Image *ReadPESImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -656,16 +657,16 @@ static Image *ReadPESImage(const ImageInfo *image_info,ExceptionInfo *exception)
   */
   read_info=CloneImageInfo(image_info);
   SetImageInfoBlob(read_info,(void *) NULL,0);
-  (void) FormatLocaleString(read_info->filename,MagickPathExtent,"svg:%s",
+  (void) FormatLocaleString(read_info->filename,MaxTextExtent,"svg:%s",
     filename);
   image=ReadImage(read_info,exception);
   if (image != (Image *) NULL)
     {
       (void) CopyMagickString(image->filename,image_info->filename,
-        MagickPathExtent);
+        MaxTextExtent);
       (void) CopyMagickString(image->magick_filename,image_info->filename,
-        MagickPathExtent);
-      (void) CopyMagickString(image->magick,"PES",MagickPathExtent);
+        MaxTextExtent);
+      (void) CopyMagickString(image->magick,"PES",MaxTextExtent);
     }
   read_info=DestroyImageInfo(read_info);
   (void) RelinquishUniqueFileResource(filename);
@@ -700,9 +701,11 @@ ModuleExport size_t RegisterPESImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("PES","PES","Embrid Embroidery Format");
+  entry=SetMagickInfo("PES");
   entry->decoder=(DecodeImageHandler *) ReadPESImage;
   entry->magick=(IsImageFormatHandler *) IsPES;
+  entry->description=ConstantString("Embrid Embroidery Format");
+  entry->module=ConstantString("PES");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }

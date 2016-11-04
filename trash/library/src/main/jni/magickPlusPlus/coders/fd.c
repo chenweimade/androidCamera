@@ -40,24 +40,25 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/resource_.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/string-private.h"
-#include "MagickCore/utility.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/constitute.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/module.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/resource_.h"
+#include "magick/string_.h"
+#include "magick/string-private.h"
+#include "magick/utility.h"
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -97,15 +98,15 @@ static Image *ReadFDImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
+  assert(exception->signature == MagickSignature);
   read_info=CloneImageInfo(image_info);
   read_info->file=fdopen(StringToLong(image_info->filename),"rb");
-  if ((read_info->file ==  (FILE *) NULL) ||
+  if ((read_info->file == (FILE *) NULL) ||
       (IsGeometry(image_info->filename) == MagickFalse))
     {
       read_info=DestroyImageInfo(read_info);
@@ -154,9 +155,11 @@ ModuleExport size_t RegisterFDImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("FD","FD","Read image from a file descriptor");
+  entry=SetMagickInfo("FD");
   entry->decoder=(DecodeImageHandler *) ReadFDImage;
-  entry->flags|=CoderStealthFlag;
+  entry->description=ConstantString("Read image from a file descriptor");
+  entry->module=ConstantString("FD");
+  entry->stealth=MagickTrue;
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }

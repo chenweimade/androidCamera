@@ -39,40 +39,40 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
+#include "magick/studio.h"
 #if defined(MAGICKCORE_WINGDI32_DELEGATE)
 #  if defined(__CYGWIN__)
 #    include <windows.h>
 #  else
      /* All MinGW needs ... */
-#    include "MagickCore/nt-base-private.h"
+#    include "magick/nt-base-private.h"
 #    include <wingdi.h>
 #  ifndef DISPLAY_DEVICE_ACTIVE
 #    define DISPLAY_DEVICE_ACTIVE    0x00000001
 #  endif
 #  endif
 #endif
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/nt-feature.h"
-#include "MagickCore/option.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/token.h"
-#include "MagickCore/utility.h"
-#include "MagickCore/xwindow.h"
-#include "MagickCore/xwindow-private.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/module.h"
+#include "magick/nt-feature.h"
+#include "magick/option.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/token.h"
+#include "magick/utility.h"
+#include "magick/xwindow.h"
+#include "magick/xwindow-private.h"
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -104,12 +104,12 @@ static Image *ReadSCREENSHOTImage(const ImageInfo *image_info,
   Image
     *image;
 
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
+  assert(exception->signature == MagickSignature);
   image=(Image *) NULL;
 #if defined(MAGICKCORE_WINGDI32_DELEGATE)
   {
@@ -136,7 +136,7 @@ static Image *ReadSCREENSHOTImage(const ImageInfo *image_info,
     MagickBooleanType
       status;
 
-    register Quantum
+    register PixelPacket
       *q;
 
     register ssize_t
@@ -161,13 +161,16 @@ static Image *ReadSCREENSHOTImage(const ImageInfo *image_info,
       if (hDC == (HDC) NULL)
         ThrowReaderException(CoderError,"UnableToCreateDC");
 
-      screen=AcquireImage(image_info,exception);
+      screen=AcquireImage(image_info);
       screen->columns=(size_t) GetDeviceCaps(hDC,HORZRES);
       screen->rows=(size_t) GetDeviceCaps(hDC,VERTRES);
       screen->storage_class=DirectClass;
-      status=SetImageExtent(screen,screen->columns,screen->rows,exception);
+      status=SetImageExtent(screen,screen->columns,screen->rows);
       if (status == MagickFalse)
-        return(DestroyImageList(image));
+        {
+          InheritException(exception,&image->exception);
+          return(DestroyImageList(image));
+        }
       if (image == (Image *) NULL)
         image=screen;
       else
@@ -208,16 +211,16 @@ static Image *ReadSCREENSHOTImage(const ImageInfo *image_info,
       for (y=0; y < (ssize_t) screen->rows; y++)
       {
         q=QueueAuthenticPixels(screen,0,y,screen->columns,1,exception);
-        if (q == (Quantum *) NULL)
+        if (q == (PixelPacket *) NULL)
           break;
         for (x=0; x < (ssize_t) screen->columns; x++)
         {
-          SetPixelRed(image,ScaleCharToQuantum(p->rgbtRed),q);
-          SetPixelGreen(image,ScaleCharToQuantum(p->rgbtGreen),q);
-          SetPixelBlue(image,ScaleCharToQuantum(p->rgbtBlue),q);
-          SetPixelAlpha(image,OpaqueAlpha,q);
+          SetPixelRed(q,ScaleCharToQuantum(p->rgbtRed));
+          SetPixelGreen(q,ScaleCharToQuantum(p->rgbtGreen));
+          SetPixelBlue(q,ScaleCharToQuantum(p->rgbtBlue));
+          SetPixelOpacity(q,OpaqueOpacity);
           p++;
-          q+=GetPixelChannels(image);
+          q++;
         }
         if (SyncAuthenticPixels(screen,exception) == MagickFalse)
           break;
@@ -236,14 +239,15 @@ static Image *ReadSCREENSHOTImage(const ImageInfo *image_info,
     XImportInfo
       ximage_info;
 
+    (void) exception;
     XGetImportInfo(&ximage_info);
     option=GetImageOption(image_info,"x:screen");
     if (option != (const char *) NULL)
-      ximage_info.screen=IsStringTrue(option);
+      ximage_info.screen=IsMagickTrue(option);
     option=GetImageOption(image_info,"x:silent");
     if (option != (const char *) NULL)
-      ximage_info.silent=IsStringTrue(option);
-    image=XImportImage(image_info,&ximage_info,exception);
+      ximage_info.silent=IsMagickTrue(option);
+    image=XImportImage(image_info,&ximage_info);
   }
 #endif
   return(image);
@@ -277,9 +281,11 @@ ModuleExport size_t RegisterSCREENSHOTImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("SCREENSHOT","SCREENSHOT","Screen shot");
+  entry=SetMagickInfo("SCREENSHOT");
   entry->decoder=(DecodeImageHandler *) ReadSCREENSHOTImage;
   entry->format_type=ImplicitFormatType;
+  entry->description=ConstantString("Screen shot");
+  entry->module=ConstantString("SCREENSHOT");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }

@@ -42,28 +42,28 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/draw.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/property.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/draw.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/module.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/property.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
 
 typedef struct _JNXInfo
 {
@@ -99,7 +99,7 @@ typedef struct _JNXLevelInfo
     scale;
 
   unsigned short
-    copyright[MagickPathExtent];
+    copyright[MaxTextExtent];
 } JNXLevelInfo;
 
 /*
@@ -152,13 +152,13 @@ static Image *ReadJNXImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -212,7 +212,7 @@ static Image *ReadJNXImage(const ImageInfo *image_info,ExceptionInfo *exception)
         (void) ReadBlobLSBLong(image);
         j=0;
         while ((c=ReadBlobLSBShort(image)) != 0)
-          if (j < (MagickPathExtent-1))
+          if (j < (MaxTextExtent-1))
             jnx_level_info[i].copyright[j++]=c;
         jnx_level_info[i].copyright[j]=0;
       }
@@ -297,14 +297,14 @@ static Image *ReadJNXImage(const ImageInfo *image_info,ExceptionInfo *exception)
           ThrowReaderException(CorruptImageError,"UnexpectedEndOfFile");
         }
       read_info=CloneImageInfo(image_info);
-      (void) CopyMagickString(read_info->magick,"JPEG",MagickPathExtent);
+      (void) CopyMagickString(read_info->magick,"JPEG",MaxTextExtent);
       tile_image=BlobToImage(read_info,blob,tile_length+2,exception);
       read_info=DestroyImageInfo(read_info);
       blob=(unsigned char *) RelinquishMagickMemory(blob);
-      offset=SeekBlob(image,restore_offset,SEEK_SET);
+      (void) SeekBlob(image,restore_offset,SEEK_SET);
       if (tile_image == (Image *) NULL)
         continue;
-      (void) CopyMagickString(tile_image->magick,image->magick,MagickPathExtent);
+      (void) CopyMagickString(tile_image->magick,image->magick,MaxTextExtent);
       (void) FormatImageProperty(tile_image,"jnx:northeast","%.20g,%.20g",
         northeast.x,northeast.y);
       (void) FormatImageProperty(tile_image,"jnx:southwest","%.20g,%.20g",
@@ -356,9 +356,11 @@ ModuleExport size_t RegisterJNXImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("JNX","JNX","Garmin tile format");
+  entry=SetMagickInfo("JNX");
   entry->decoder=(DecodeImageHandler *) ReadJNXImage;
-  entry->flags|=CoderSeekableStreamFlag;
+  entry->description=ConstantString("Garmin tile format");
+  entry->seekable_stream=MagickTrue;
+  entry->module=ConstantString("JNX");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }

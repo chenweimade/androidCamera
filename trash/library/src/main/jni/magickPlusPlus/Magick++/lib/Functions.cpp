@@ -1,7 +1,7 @@
 // This may look like C code, but it is really -*- C++ -*-
 //
 // Copyright Bob Friesenhahn, 1999, 2002, 2003
-// Copyright Dirk Lemstra 2014-2015
+// Copyright Dirk Lemstra 2014-2016
 //
 // Simple C++ function wrappers for ImageMagick equivalents
 //
@@ -19,7 +19,6 @@ using namespace std;
 
 static bool magick_initialized=false;
 
-// Clone C++ string as allocated C string, de-allocating any existing string
 MagickPPExport void Magick::CloneString(char **destination_,
   const std::string &source_)
 {
@@ -28,16 +27,28 @@ MagickPPExport void Magick::CloneString(char **destination_,
 
 MagickPPExport void Magick::DisableOpenCL(void)
 {
-  MagickCore::SetOpenCLEnabled(MagickFalse);
+  GetPPException;
+  MagickCore::InitImageMagickOpenCL(MagickCore::MAGICK_OPENCL_OFF,NULL,NULL,
+    exceptionInfo);
+  ThrowPPException(false);
 }
 
-MagickPPExport bool Magick::EnableOpenCL(void)
+MagickPPExport bool Magick::EnableOpenCL(const bool useCache_)
 {
   bool
     status;
 
- status=MagickCore::SetOpenCLEnabled(MagickTrue) != MagickFalse;
- return(status);
+  GetPPException;
+  if (useCache_)
+    status=MagickCore::InitImageMagickOpenCL(
+      MagickCore::MAGICK_OPENCL_DEVICE_SELECT_AUTO,NULL,NULL,exceptionInfo) ==
+      MagickTrue;
+  else
+    status=MagickCore::InitImageMagickOpenCL(
+      MagickCore::MAGICK_OPENCL_DEVICE_SELECT_AUTO_CLEAR_CACHE,NULL,NULL,
+      exceptionInfo) == MagickTrue;
+  ThrowPPException(false);
+  return(status);
 }
 
 MagickPPExport void Magick::InitializeMagick(const char *path_)
@@ -54,9 +65,9 @@ MagickPPExport void Magick::SetRandomSeed(const unsigned long seed)
 
 MagickPPExport void Magick::TerminateMagick(void)
 {
-  if (magick_initialized)
-    {
-      magick_initialized=false;
-      MagickCore::MagickCoreTerminus();
-    }
+ if (magick_initialized)
+   {
+     magick_initialized=false;
+     MagickCore::MagickCoreTerminus();
+   }
 }

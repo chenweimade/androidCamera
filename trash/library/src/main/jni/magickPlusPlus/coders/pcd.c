@@ -39,42 +39,43 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/property.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/client.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/constitute.h"
-#include "MagickCore/decorate.h"
-#include "MagickCore/distort.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/gem.h"
-#include "MagickCore/geometry.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/montage.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/resize.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/utility.h"
+#include "magick/studio.h"
+#include "magick/property.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/client.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/constitute.h"
+#include "magick/decorate.h"
+#include "magick/distort.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/gem.h"
+#include "magick/geometry.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/montage.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/resize.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/transform.h"
+#include "magick/utility.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WritePCDImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WritePCDImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -110,7 +111,7 @@ static MagickBooleanType
 %
 */
 static MagickBooleanType DecodeImage(Image *image,unsigned char *luma,
-  unsigned char *chroma1,unsigned char *chroma2,ExceptionInfo *exception)
+  unsigned char *chroma1,unsigned char *chroma2)
 {
 #define IsSync(sum)  ((sum & 0xffffff00UL) == 0xfffffe00UL)
 #define PCDGetBits(n) \
@@ -176,7 +177,7 @@ static MagickBooleanType DecodeImage(Image *image,unsigned char *luma,
     Initialize Huffman tables.
   */
   assert(image != (const Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   assert(luma != (unsigned char *) NULL);
@@ -297,7 +298,7 @@ static MagickBooleanType DecodeImage(Image *image,unsigned char *luma,
       r++;
     if ((row > image->rows) || (r == (PCDTable *) NULL))
       {
-        (void) ThrowMagickException(exception,GetMagickModule(),
+        (void) ThrowMagickException(&image->exception,GetMagickModule(),
           CorruptImageWarning,"SkipToSyncByte","`%s'",image->filename);
         while ((sum & 0x00fff000) != 0x00fff000)
           PCDGetBits(8);
@@ -402,11 +403,11 @@ static Image *OverviewImage(const ImageInfo *image_info,Image *image,
   for (p=image; p != (Image *) NULL; p=p->next)
   {
     (void) DeleteImageProperty(p,"label");
-    (void) SetImageProperty(p,"label",DefaultTileLabel,exception);
+    (void) SetImageProperty(p,"label",DefaultTileLabel);
   }
   montage_info=CloneMontageInfo(image_info,(MontageInfo *) NULL);
   (void) CopyMagickString(montage_info->filename,image_info->filename,
-    MagickPathExtent);
+    MaxTextExtent);
   montage_image=MontageImageList(image_info,montage_info,image,exception);
   montage_info=DestroyMontageInfo(montage_info);
   if (montage_image == (Image *) NULL)
@@ -485,7 +486,7 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
     i,
     y;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   register unsigned char
@@ -517,13 +518,13 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -539,7 +540,7 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
   count=ReadBlob(image,3*0x800,header);
   overview=LocaleNCompare((char *) header,"PCD_OPA",7) == 0;
   if ((count != (3*0x800)) ||
-      ((LocaleNCompare((char *) header+0x800,"PCD",3) != 0) && (overview ==0)))
+      ((LocaleNCompare((char *) header+0x800,"PCD",3) != 0) && (overview == 0)))
     ThrowReaderException(CorruptImageError,"ImproperImageHeader");
   rotate=header[0x0e02] & 0x03;
   number_images=(header[10] << 8) | header[11];
@@ -585,9 +586,12 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
     image->columns<<=1;
     image->rows<<=1;
   }
-  status=SetImageExtent(image,image->columns,image->rows,exception);
+  status=SetImageExtent(image,image->columns,image->rows);
   if (status == MagickFalse)
-    return(DestroyImageList(image));
+    {
+      InheritException(exception,&image->exception);
+      return(DestroyImageList(image));
+    }
   /*
     Allocate luma and chroma memory.
   */
@@ -595,11 +599,11 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
   if (number_pixels != (size_t) number_pixels)
     ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
   chroma1=(unsigned char *) AcquireQuantumMemory(image->columns+1UL,image->rows*
-    10*sizeof(*chroma1));
+    sizeof(*chroma1));
   chroma2=(unsigned char *) AcquireQuantumMemory(image->columns+1UL,image->rows*
-    10*sizeof(*chroma2));
+    sizeof(*chroma2));
   luma=(unsigned char *) AcquireQuantumMemory(image->columns+1UL,image->rows*
-    10*sizeof(*luma));
+    sizeof(*luma));
   if ((chroma1 == (unsigned char *) NULL) ||
       (chroma2 == (unsigned char *) NULL) || (luma == (unsigned char *) NULL))
     ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
@@ -635,9 +639,9 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
       {
         progress_monitor=SetImageProgressMonitor(image,
           (MagickProgressMonitor) NULL,image->client_data);
-        (void) FormatLocaleString(image->filename,MagickPathExtent,
+        (void) FormatLocaleString(image->filename,MaxTextExtent,
           "images/img%04ld.pcd",(long) j);
-        (void) FormatLocaleString(image->magick_filename,MagickPathExtent,
+        (void) FormatLocaleString(image->magick_filename,MaxTextExtent,
           "images/img%04ld.pcd",(long) j);
         image->scene=(size_t) j;
         image->columns=width;
@@ -668,27 +672,27 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
         for (y=0; y < (ssize_t) image->rows; y++)
         {
           q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-          if (q == (Quantum *) NULL)
+          if (q == (PixelPacket *) NULL)
             break;
           for (x=0; x < (ssize_t) image->columns; x++)
           {
-            SetPixelRed(image,ScaleCharToQuantum(*yy++),q);
-            SetPixelGreen(image,ScaleCharToQuantum(*c1++),q);
-            SetPixelBlue(image,ScaleCharToQuantum(*c2++),q);
-            q+=GetPixelChannels(image);
+            SetPixelRed(q,ScaleCharToQuantum(*yy++));
+            SetPixelGreen(q,ScaleCharToQuantum(*c1++));
+            SetPixelBlue(q,ScaleCharToQuantum(*c2++));
+            q++;
           }
           if (SyncAuthenticPixels(image,exception) == MagickFalse)
             break;
         }
         image->colorspace=YCCColorspace;
         if (LocaleCompare(image_info->magick,"PCDS") == 0)
-          SetImageColorspace(image,sRGBColorspace,exception);
+          SetImageColorspace(image,sRGBColorspace);
         if (j < (ssize_t) number_images)
           {
             /*
               Allocate next image structure.
             */
-            AcquireNextImage(image_info,image,exception);
+            AcquireNextImage(image_info,image);
             if (GetNextImageInList(image) == (Image *) NULL)
               {
                 image=DestroyImageList(image);
@@ -740,7 +744,7 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
       image->rows=1024;
       for (i=0; i < (4*0x800); i++)
         (void) ReadBlobByte(image);
-      status=DecodeImage(image,luma,chroma1,chroma2,exception);
+      status=DecodeImage(image,luma,chroma1,chroma2);
       if ((scene >= 5) && status)
         {
           /*
@@ -752,7 +756,7 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
           image->rows=2048;
           offset=TellBlob(image)/0x800+12;
           offset=SeekBlob(image,offset*0x800,SEEK_SET);
-          status=DecodeImage(image,luma,chroma1,chroma2,exception);
+          status=DecodeImage(image,luma,chroma1,chroma2);
           if ((scene >= 6) && (status != MagickFalse))
             {
               /*
@@ -776,14 +780,14 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
   for (y=0; y < (ssize_t) image->rows; y++)
   {
     q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-    if (q == (Quantum *) NULL)
+    if (q == (PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) image->columns; x++)
     {
-      SetPixelRed(image,ScaleCharToQuantum(*yy++),q);
-      SetPixelGreen(image,ScaleCharToQuantum(*c1++),q);
-      SetPixelBlue(image,ScaleCharToQuantum(*c2++),q);
-      q+=GetPixelChannels(image);
+      SetPixelRed(q,ScaleCharToQuantum(*yy++));
+      SetPixelGreen(q,ScaleCharToQuantum(*c1++));
+      SetPixelBlue(q,ScaleCharToQuantum(*c2++));
+      q++;
     }
     if (SyncAuthenticPixels(image,exception) == MagickFalse)
       break;
@@ -836,7 +840,7 @@ static Image *ReadPCDImage(const ImageInfo *image_info,ExceptionInfo *exception)
   image->gamma=1.000f/2.200f;
   image->colorspace=YCCColorspace;
   if (LocaleCompare(image_info->magick,"PCDS") == 0)
-    SetImageColorspace(image,sRGBColorspace,exception);
+    SetImageColorspace(image,sRGBColorspace);
   return(GetFirstImageInList(image));
 }
 
@@ -868,18 +872,22 @@ ModuleExport size_t RegisterPCDImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("PCD","PCD","Photo CD");
+  entry=SetMagickInfo("PCD");
   entry->decoder=(DecodeImageHandler *) ReadPCDImage;
   entry->encoder=(EncodeImageHandler *) WritePCDImage;
   entry->magick=(IsImageFormatHandler *) IsPCD;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderSeekableStreamFlag;
+  entry->adjoin=MagickFalse;
+  entry->seekable_stream=MagickTrue;
+  entry->description=ConstantString("Photo CD");
+  entry->module=ConstantString("PCD");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("PCD","PCDS","Photo CD");
+  entry=SetMagickInfo("PCDS");
   entry->decoder=(DecodeImageHandler *) ReadPCDImage;
   entry->encoder=(EncodeImageHandler *) WritePCDImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderSeekableStreamFlag;
+  entry->adjoin=MagickFalse;
+  entry->seekable_stream=MagickTrue;
+  entry->description=ConstantString("Photo CD");
+  entry->module=ConstantString("PCD");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -924,8 +932,7 @@ ModuleExport void UnregisterPCDImage(void)
 %
 %  The format of the WritePCDImage method is:
 %
-%      MagickBooleanType WritePCDImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%      MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -933,12 +940,10 @@ ModuleExport void UnregisterPCDImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
 
 static MagickBooleanType WritePCDTile(Image *image,const char *page_geometry,
-  const size_t tile_columns,const size_t tile_rows,ExceptionInfo *exception)
+  const char *tile_geometry)
 {
   GeometryInfo
     geometry_info;
@@ -956,7 +961,7 @@ static MagickBooleanType WritePCDTile(Image *image,const char *page_geometry,
   RectangleInfo
     geometry;
 
-  register const Quantum
+  register const PixelPacket
     *p,
     *q;
 
@@ -978,7 +983,7 @@ static MagickBooleanType WritePCDTile(Image *image,const char *page_geometry,
   if ((geometry.height % 2) != 0)
     geometry.height--;
   tile_image=ResizeImage(image,geometry.width,geometry.height,TriangleFilter,
-    exception);
+    1.0,&image->exception);
   if (tile_image == (Image *) NULL)
     return(MagickFalse);
   flags=ParseGeometry(page_geometry,&geometry_info);
@@ -1000,29 +1005,16 @@ static MagickBooleanType WritePCDTile(Image *image,const char *page_geometry,
       */
       border_info.width=(geometry.width-tile_image->columns+1) >> 1;
       border_info.height=(geometry.height-tile_image->rows+1) >> 1;
-      bordered_image=BorderImage(tile_image,&border_info,image->compose,
-        exception);
+      bordered_image=BorderImage(tile_image,&border_info,&image->exception);
       if (bordered_image == (Image *) NULL)
         return(MagickFalse);
       tile_image=DestroyImage(tile_image);
       tile_image=bordered_image;
     }
-  if ((tile_image->columns != tile_columns) || (tile_image->rows != tile_rows))
-    {
-      Image
-        *resize_image;
-
-      resize_image=ResizeImage(tile_image,tile_columns,tile_rows,
-        tile_image->filter,exception);
-      if (resize_image != (Image *) NULL)
-        {
-          tile_image=DestroyImage(tile_image);
-          tile_image=resize_image;
-        }
-    }
-  (void) TransformImageColorspace(tile_image,YCCColorspace,exception);
+  (void) TransformImage(&tile_image,(char *) NULL,tile_geometry);
+  (void) TransformImageColorspace(tile_image,YCCColorspace);
   downsample_image=ResizeImage(tile_image,tile_image->columns/2,
-    tile_image->rows/2,TriangleFilter,exception);
+    tile_image->rows/2,TriangleFilter,1.0,&image->exception);
   if (downsample_image == (Image *) NULL)
     return(MagickFalse);
   /*
@@ -1030,32 +1022,31 @@ static MagickBooleanType WritePCDTile(Image *image,const char *page_geometry,
   */
   for (y=0; y < (ssize_t) tile_image->rows; y+=2)
   {
-    p=GetVirtualPixels(tile_image,0,y,tile_image->columns,2,exception);
-    if (p == (const Quantum *) NULL)
+    p=GetVirtualPixels(tile_image,0,y,tile_image->columns,2,
+      &tile_image->exception);
+    if (p == (const PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) (tile_image->columns << 1); x++)
     {
-      (void) WriteBlobByte(image,ScaleQuantumToChar(GetPixelRed(tile_image,p)));
-      p+=GetPixelChannels(tile_image);
+      (void) WriteBlobByte(image,ScaleQuantumToChar(GetPixelRed(p)));
+      p++;
     }
-    q=GetVirtualPixels(downsample_image,0,y >> 1,downsample_image->columns,1,
-      exception);
-    if (q == (Quantum *) NULL)
+    q=GetVirtualPixels(downsample_image,0,y >> 1,downsample_image->columns,
+      1,&downsample_image->exception);
+    if (q == (const PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) downsample_image->columns; x++)
     {
-      (void) WriteBlobByte(image,ScaleQuantumToChar(
-        GetPixelGreen(tile_image,q)));
+      (void) WriteBlobByte(image,ScaleQuantumToChar(GetPixelGreen(q)));
       q++;
     }
-    q=GetVirtualPixels(downsample_image,0,y >> 1,downsample_image->columns,1,
-      exception);
-    if (q == (Quantum *) NULL)
+    q=GetVirtualPixels(downsample_image,0,y >> 1,downsample_image->columns,
+      1,&downsample_image->exception);
+    if (q == (const PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) downsample_image->columns; x++)
     {
-      (void) WriteBlobByte(image,ScaleQuantumToChar(
-        GetPixelBlue(tile_image,q)));
+      (void) WriteBlobByte(image,ScaleQuantumToChar(GetPixelBlue(q)));
       q++;
     }
     status=SetImageProgress(image,SaveImageTag,y,tile_image->rows);
@@ -1069,8 +1060,7 @@ static MagickBooleanType WritePCDTile(Image *image,const char *page_geometry,
   return(MagickTrue);
 }
 
-static MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image,
-  ExceptionInfo *exception)
+static MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image)
 {
   Image
     *pcd_image;
@@ -1082,9 +1072,9 @@ static MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image,
     i;
 
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   pcd_image=image;
@@ -1096,7 +1086,7 @@ static MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image,
       /*
         Rotate portrait to landscape.
       */
-      rotate_image=RotateImage(image,90.0,exception);
+      rotate_image=RotateImage(image,90.0,&image->exception);
       if (rotate_image == (Image *) NULL)
         return(MagickFalse);
       pcd_image=rotate_image;
@@ -1104,11 +1094,11 @@ static MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image,
   /*
     Open output image file.
   */
-  status=OpenBlob(image_info,pcd_image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,pcd_image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
-  if (IssRGBCompatibleColorspace(pcd_image->colorspace) == MagickFalse)
-    (void) TransformImageColorspace(pcd_image,sRGBColorspace,exception);
+  if (IssRGBCompatibleColorspace(image->colorspace) == MagickFalse)
+    (void) TransformImageColorspace(pcd_image,sRGBColorspace);
   /*
     Write PCD image header.
   */
@@ -1145,9 +1135,9 @@ static MagickBooleanType WritePCDImage(const ImageInfo *image_info,Image *image,
   /*
     Write PCD tiles.
   */
-  status=WritePCDTile(pcd_image,"768x512>",192,128,exception);
-  status=WritePCDTile(pcd_image,"768x512>",384,256,exception);
-  status=WritePCDTile(pcd_image,"768x512>",768,512,exception);
+  status=WritePCDTile(pcd_image,"768x512>","192x128");
+  status=WritePCDTile(pcd_image,"768x512>","384x256");
+  status=WritePCDTile(pcd_image,"768x512>","768x512");
   (void) CloseBlob(pcd_image);
   if (pcd_image != image)
     pcd_image=DestroyImage(pcd_image);

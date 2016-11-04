@@ -39,32 +39,32 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/color.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/color.h"
+#include "magick/colorspace.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
 
 /*
   Forward declarations.
 */
 static MagickBooleanType
-  WriteUYVYImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteUYVYImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -105,7 +105,7 @@ static Image *ReadUYVYImage(const ImageInfo *image_info,
   register ssize_t
     x;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   ssize_t
@@ -121,18 +121,18 @@ static Image *ReadUYVYImage(const ImageInfo *image_info,
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   if ((image->columns == 0) || (image->rows == 0))
     ThrowReaderException(OptionError,"MustSpecifyImageSize");
   if ((image->columns % 2) != 0)
     image->columns++;
-  (void) CopyMagickString(image->filename,image_info->filename,MagickPathExtent);
+  (void) CopyMagickString(image->filename,image_info->filename,MaxTextExtent);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     return((Image *) NULL);
@@ -145,16 +145,19 @@ static Image *ReadUYVYImage(const ImageInfo *image_info,
       (void) CloseBlob(image);
       return(GetFirstImageInList(image));
     }
-  status=SetImageExtent(image,image->columns,image->rows,exception);
+  status=SetImageExtent(image,image->columns,image->rows);
   if (status == MagickFalse)
-    return(DestroyImageList(image));
+    {
+      InheritException(exception,&image->exception);
+      return(DestroyImageList(image));
+    }
   /*
     Accumulate UYVY, then unpack into two pixels.
   */
   for (y=0; y < (ssize_t) image->rows; y++)
   {
     q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-    if (q == (Quantum *) NULL)
+    if (q == (PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) (image->columns >> 1); x++)
     {
@@ -162,14 +165,14 @@ static Image *ReadUYVYImage(const ImageInfo *image_info,
       y1=(unsigned char) ReadBlobByte(image);
       v=(unsigned char) ReadBlobByte(image);
       y2=(unsigned char) ReadBlobByte(image);
-      SetPixelRed(image,ScaleCharToQuantum(y1),q);
-      SetPixelGreen(image,ScaleCharToQuantum(u),q);
-      SetPixelBlue(image,ScaleCharToQuantum(v),q);
-      q+=GetPixelChannels(image);
-      SetPixelRed(image,ScaleCharToQuantum(y2),q);
-      SetPixelGreen(image,ScaleCharToQuantum(u),q);
-      SetPixelBlue(image,ScaleCharToQuantum(v),q);
-      q+=GetPixelChannels(image);
+      SetPixelRed(q,ScaleCharToQuantum(y1));
+      SetPixelGreen(q,ScaleCharToQuantum(u));
+      SetPixelBlue(q,ScaleCharToQuantum(v));
+      q++;
+      SetPixelRed(q,ScaleCharToQuantum(y2));
+      SetPixelGreen(q,ScaleCharToQuantum(u));
+      SetPixelBlue(q,ScaleCharToQuantum(v));
+      q++;
     }
     if (SyncAuthenticPixels(image,exception) == MagickFalse)
       break;
@@ -178,7 +181,7 @@ static Image *ReadUYVYImage(const ImageInfo *image_info,
     if (status == MagickFalse)
       break;
   }
-  SetImageColorspace(image,YCbCrColorspace,exception);
+  SetImageColorspace(image,YCbCrColorspace);
   if (EOFBlob(image) != MagickFalse)
     ThrowFileException(exception,CorruptImageError,"UnexpectedEndOfFile",
       image->filename);
@@ -214,19 +217,23 @@ ModuleExport size_t RegisterUYVYImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("UYVY","PAL","16bit/pixel interleaved YUV");
+  entry=SetMagickInfo("PAL");
   entry->decoder=(DecodeImageHandler *) ReadUYVYImage;
   entry->encoder=(EncodeImageHandler *) WriteUYVYImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderRawSupportFlag;
-  entry->flags|=CoderEndianSupportFlag;
+  entry->adjoin=MagickFalse;
+  entry->raw=MagickTrue;
+  entry->endian_support=MagickTrue;
+  entry->description=ConstantString("16bit/pixel interleaved YUV");
+  entry->module=ConstantString("UYVY");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("UYVY","UYVY","16bit/pixel interleaved YUV");
+  entry=SetMagickInfo("UYVY");
   entry->decoder=(DecodeImageHandler *) ReadUYVYImage;
   entry->encoder=(EncodeImageHandler *) WriteUYVYImage;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderRawSupportFlag;
-  entry->flags|=CoderEndianSupportFlag;
+  entry->adjoin=MagickFalse;
+  entry->raw=MagickTrue;
+  entry->endian_support=MagickTrue;
+  entry->description=ConstantString("16bit/pixel interleaved YUV");
+  entry->module=ConstantString("UYVY");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -274,21 +281,20 @@ ModuleExport void UnregisterUYVYImage(void)
 %  The format of the WriteUYVYImage method is:
 %
 %      MagickBooleanType WriteUYVYImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%        Image *image)
 %
 %  A description of each parameter follows.
 %
 %    o image_info: the image info.
 %
-%    o image:  The image.  Implicit assumption: number of columns is even.
-%
-%    o exception: return any errors or warnings in this structure.
+%    o image:  The image.
+%      Implicit assumption: number of columns is even.
 %
 */
 static MagickBooleanType WriteUYVYImage(const ImageInfo *image_info,
-  Image *image,ExceptionInfo *exception)
+  Image *image)
 {
-  PixelInfo
+  MagickPixelPacket
     pixel;
 
   Image
@@ -298,7 +304,7 @@ static MagickBooleanType WriteUYVYImage(const ImageInfo *image_info,
     full,
     status;
 
-  register const Quantum
+  register const PixelPacket
     *p;
 
   register ssize_t
@@ -311,49 +317,47 @@ static MagickBooleanType WriteUYVYImage(const ImageInfo *image_info,
     Open output image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   if ((image->columns % 2) != 0)
     image->columns++;
-  assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   /*
     Accumulate two pixels, then output.
   */
-  uyvy_image=CloneImage(image,0,0,MagickTrue,exception);
+  uyvy_image=CloneImage(image,0,0,MagickTrue,&image->exception);
   if (uyvy_image == (Image *) NULL)
-    return(MagickFalse);
-  (void) TransformImageColorspace(uyvy_image,YCbCrColorspace,exception);
+    ThrowWriterException(ResourceLimitError,image->exception.reason);
+  (void) TransformImageColorspace(uyvy_image,YCbCrColorspace);
   full=MagickFalse;
-  (void) ResetMagickMemory(&pixel,0,sizeof(PixelInfo));
+  (void) ResetMagickMemory(&pixel,0,sizeof(MagickPixelPacket));
   for (y=0; y < (ssize_t) image->rows; y++)
   {
-    p=GetVirtualPixels(uyvy_image,0,y,image->columns,1,exception);
-    if (p == (const Quantum *) NULL)
+    p=GetVirtualPixels(uyvy_image,0,y,image->columns,1,&image->exception);
+    if (p == (const PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) image->columns; x++)
     {
       if (full != MagickFalse)
         {
-          pixel.green=(pixel.green+GetPixelGreen(uyvy_image,p))/2;
-          pixel.blue=(pixel.blue+GetPixelBlue(uyvy_image,p))/2;
+          pixel.green=(pixel.green+GetPixelGreen(p))/2;
+          pixel.blue=(pixel.blue+GetPixelBlue(p))/2;
           (void) WriteBlobByte(image,ScaleQuantumToChar((Quantum) pixel.green));
           (void) WriteBlobByte(image,ScaleQuantumToChar((Quantum) pixel.red));
           (void) WriteBlobByte(image,ScaleQuantumToChar((Quantum) pixel.blue));
           (void) WriteBlobByte(image,ScaleQuantumToChar(
-            GetPixelRed(uyvy_image,p)));
+             GetPixelRed(p)));
         }
-      pixel.red=(double) GetPixelRed(uyvy_image,p);
-      pixel.green=(double) GetPixelGreen(uyvy_image,p);
-      pixel.blue=(double) GetPixelBlue(uyvy_image,p);
+      pixel.red=(double) GetPixelRed(p);
+      pixel.green=(double) GetPixelGreen(p);
+      pixel.blue=(double) GetPixelBlue(p);
       full=full == MagickFalse ? MagickTrue : MagickFalse;
-      p+=GetPixelChannels(uyvy_image);
+      p++;
     }
     status=SetImageProgress(image,LoadImageTag,(MagickOffsetType) y,
       image->rows);

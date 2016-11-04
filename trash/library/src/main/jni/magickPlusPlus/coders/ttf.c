@@ -39,23 +39,24 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/draw.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/type.h"
-#include "MagickWand/MagickWand.h"
+#include "magick/studio.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/draw.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/type.h"
+#include "wand/MagickWand.h"
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
 #include <ft2build.h>
 #if defined(FT_FREETYPE_H)
@@ -167,7 +168,7 @@ static MagickBooleanType IsTTF(const unsigned char *magick,const size_t length)
 static Image *ReadTTFImage(const ImageInfo *image_info,ExceptionInfo *exception)
 {
   char
-    buffer[MagickPathExtent],
+    buffer[MaxTextExtent],
     *text;
 
   const char
@@ -188,14 +189,14 @@ static Image *ReadTTFImage(const ImageInfo *image_info,ExceptionInfo *exception)
   MagickBooleanType
     status;
 
-  PixelInfo
+  PixelPacket
     background_color;
 
   register ssize_t
     i,
     x;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   ssize_t
@@ -205,28 +206,31 @@ static Image *ReadTTFImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   image->columns=800;
   image->rows=480;
   type_info=GetTypeInfo(image_info->filename,exception);
   if ((type_info != (const TypeInfo *) NULL) &&
       (type_info->glyphs != (char *) NULL))
-    (void) CopyMagickString(image->filename,type_info->glyphs,MagickPathExtent);
+    (void) CopyMagickString(image->filename,type_info->glyphs,MaxTextExtent);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
       image=DestroyImageList(image);
       return((Image *) NULL);
     }
-  status=SetImageExtent(image,image->columns,image->rows,exception);
+  status=SetImageExtent(image,image->columns,image->rows);
   if (status == MagickFalse)
-    return(DestroyImageList(image));
+    {
+      InheritException(exception,&image->exception);
+      return(DestroyImageList(image));
+    }
   /*
     Color canvas with background color
   */
@@ -234,19 +238,15 @@ static Image *ReadTTFImage(const ImageInfo *image_info,ExceptionInfo *exception)
   for (y=0; y < (ssize_t) image->rows; y++)
   {
     q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-    if (q == (Quantum *) NULL)
+    if (q == (PixelPacket *) NULL)
       break;
     for (x=0; x < (ssize_t) image->columns; x++)
-    {
-      SetPixelViaPixelInfo(image,&background_color,q);
-      q+=GetPixelChannels(image);
-    }
+      *q++=background_color;
     if (SyncAuthenticPixels(image,exception) == MagickFalse)
       break;
   }
-  (void) CopyMagickString(image->magick,image_info->magick,MagickPathExtent);
-  (void) CopyMagickString(image->filename,image_info->filename,
-    MagickPathExtent);
+  (void) CopyMagickString(image->magick,image_info->magick,MaxTextExtent);
+  (void) CopyMagickString(image->filename,image_info->filename,MaxTextExtent);
   /*
     Prepare drawing commands
   */
@@ -254,37 +254,36 @@ static Image *ReadTTFImage(const ImageInfo *image_info,ExceptionInfo *exception)
   draw_info=CloneDrawInfo(image_info,(DrawInfo *) NULL);
   draw_info->font=AcquireString(image->filename);
   ConcatenateString(&draw_info->primitive,"push graphic-context\n");
-  (void) FormatLocaleString(buffer,MagickPathExtent,
-    " viewbox 0 0 %.20g %.20g\n",(double) image->columns,(double) image->rows);
+  (void) FormatLocaleString(buffer,MaxTextExtent," viewbox 0 0 %.20g %.20g\n",
+    (double) image->columns,(double) image->rows);
   ConcatenateString(&draw_info->primitive,buffer);
   ConcatenateString(&draw_info->primitive," font-size 18\n");
-  (void) FormatLocaleString(buffer,MagickPathExtent," text 10,%.20g '",
-    (double) y);
+  (void) FormatLocaleString(buffer,MaxTextExtent," text 10,%.20g '",(double) y);
   ConcatenateString(&draw_info->primitive,buffer);
   text=EscapeString(Text,'"');
   ConcatenateString(&draw_info->primitive,text);
   text=DestroyString(text);
-  (void) FormatLocaleString(buffer,MagickPathExtent,"'\n");
+  (void) FormatLocaleString(buffer,MaxTextExtent,"'\n");
   ConcatenateString(&draw_info->primitive,buffer);
   y+=20*(ssize_t) MultilineCensus((char *) Text)+20;
   for (i=12; i <= 72; i+=6)
   {
     y+=i+12;
     ConcatenateString(&draw_info->primitive," font-size 18\n");
-    (void) FormatLocaleString(buffer,MagickPathExtent,
-      " text 10,%.20g '%.20g'\n",(double) y,(double) i);
+    (void) FormatLocaleString(buffer,MaxTextExtent," text 10,%.20g '%.20g'\n",
+      (double) y,(double) i);
     ConcatenateString(&draw_info->primitive,buffer);
-    (void) FormatLocaleString(buffer,MagickPathExtent," font-size %.20g\n",
+    (void) FormatLocaleString(buffer,MaxTextExtent," font-size %.20g\n",
       (double) i);
     ConcatenateString(&draw_info->primitive,buffer);
-    (void) FormatLocaleString(buffer,MagickPathExtent," text 50,%.20g "
+    (void) FormatLocaleString(buffer,MaxTextExtent," text 50,%.20g "
       "'That which does not destroy me, only makes me stronger.'\n",(double) y);
     ConcatenateString(&draw_info->primitive,buffer);
     if (i >= 24)
       i+=6;
   }
   ConcatenateString(&draw_info->primitive,"pop graphic-context");
-  (void) DrawImage(image,draw_info,exception);
+  (void) DrawImage(image,draw_info);
   /*
     Relinquish resources.
   */
@@ -320,69 +319,81 @@ static Image *ReadTTFImage(const ImageInfo *image_info,ExceptionInfo *exception)
 ModuleExport size_t RegisterTTFImage(void)
 {
   char
-    version[MagickPathExtent];
+    version[MaxTextExtent];
 
   MagickInfo
     *entry;
 
   *version='\0';
 #if defined(FREETYPE_MAJOR) && defined(FREETYPE_MINOR) && defined(FREETYPE_PATCH)
-  (void) FormatLocaleString(version,MagickPathExtent,"Freetype %d.%d.%d",
+  (void) FormatLocaleString(version,MaxTextExtent,"Freetype %d.%d.%d",
     FREETYPE_MAJOR,FREETYPE_MINOR,FREETYPE_PATCH);
 #endif
-  entry=AcquireMagickInfo("TTF","DFONT","Multi-face font package");
+  entry=SetMagickInfo("DFONT");
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadTTFImage;
 #endif
   entry->magick=(IsImageFormatHandler *) IsTTF;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString("Multi-face font package");
   if (*version != '\0')
     entry->version=ConstantString(version);
+  entry->module=ConstantString("TTF");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("TTF","PFA","Postscript Type 1 font (ASCII)");
+  entry=SetMagickInfo("PFA");
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadTTFImage;
 #endif
   entry->magick=(IsImageFormatHandler *) IsPFA;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString("Postscript Type 1 font (ASCII)");
   if (*version != '\0')
     entry->version=ConstantString(version);
+  entry->module=ConstantString("TTF");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("TTF","PFB","Postscript Type 1 font (binary)");
+  entry=SetMagickInfo("PFB");
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadTTFImage;
 #endif
   entry->magick=(IsImageFormatHandler *) IsPFA;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString("Postscript Type 1 font (binary)");
   if (*version != '\0')
     entry->version=ConstantString(version);
+  entry->module=ConstantString("TTF");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("TTF","OTF","Open Type font");
+  entry=SetMagickInfo("OTF");
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadTTFImage;
 #endif
   entry->magick=(IsImageFormatHandler *) IsTTF;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString("Open Type font");
   if (*version != '\0')
     entry->version=ConstantString(version);
+  entry->module=ConstantString("TTF");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("TTF","TTC","TrueType font collection");
+  entry=SetMagickInfo("TTC");
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadTTFImage;
 #endif
   entry->magick=(IsImageFormatHandler *) IsTTF;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString("TrueType font collection");
   if (*version != '\0')
     entry->version=ConstantString(version);
+  entry->module=ConstantString("TTF");
   (void) RegisterMagickInfo(entry);
-  entry=AcquireMagickInfo("TTF","TTF","TrueType font");
+  entry=SetMagickInfo("TTF");
 #if defined(MAGICKCORE_FREETYPE_DELEGATE)
   entry->decoder=(DecodeImageHandler *) ReadTTFImage;
 #endif
   entry->magick=(IsImageFormatHandler *) IsTTF;
-  entry->flags^=CoderAdjoinFlag;
+  entry->adjoin=MagickFalse;
+  entry->description=ConstantString("TrueType font");
   if (*version != '\0')
     entry->version=ConstantString(version);
+  entry->module=ConstantString("TTF");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }

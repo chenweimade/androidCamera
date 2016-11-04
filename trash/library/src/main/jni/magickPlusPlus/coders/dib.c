@@ -39,35 +39,35 @@
 /*
   Include declarations.
 */
-#include "MagickCore/studio.h"
-#include "MagickCore/attribute.h"
-#include "MagickCore/blob.h"
-#include "MagickCore/blob-private.h"
-#include "MagickCore/cache.h"
-#include "MagickCore/color.h"
-#include "MagickCore/color-private.h"
-#include "MagickCore/colormap.h"
-#include "MagickCore/colormap-private.h"
-#include "MagickCore/colorspace.h"
-#include "MagickCore/colorspace-private.h"
-#include "MagickCore/draw.h"
-#include "MagickCore/exception.h"
-#include "MagickCore/exception-private.h"
-#include "MagickCore/geometry.h"
-#include "MagickCore/image.h"
-#include "MagickCore/image-private.h"
-#include "MagickCore/list.h"
-#include "MagickCore/log.h"
-#include "MagickCore/magick.h"
-#include "MagickCore/memory_.h"
-#include "MagickCore/monitor.h"
-#include "MagickCore/monitor-private.h"
-#include "MagickCore/pixel-accessor.h"
-#include "MagickCore/quantum-private.h"
-#include "MagickCore/static.h"
-#include "MagickCore/string_.h"
-#include "MagickCore/module.h"
-#include "MagickCore/transform.h"
+#include "magick/studio.h"
+#include "magick/attribute.h"
+#include "magick/blob.h"
+#include "magick/blob-private.h"
+#include "magick/cache.h"
+#include "magick/color.h"
+#include "magick/color-private.h"
+#include "magick/colormap.h"
+#include "magick/colormap-private.h"
+#include "magick/colorspace.h"
+#include "magick/colorspace-private.h"
+#include "magick/draw.h"
+#include "magick/exception.h"
+#include "magick/exception-private.h"
+#include "magick/geometry.h"
+#include "magick/image.h"
+#include "magick/image-private.h"
+#include "magick/list.h"
+#include "magick/log.h"
+#include "magick/magick.h"
+#include "magick/memory_.h"
+#include "magick/monitor.h"
+#include "magick/monitor-private.h"
+#include "magick/pixel-accessor.h"
+#include "magick/quantum-private.h"
+#include "magick/static.h"
+#include "magick/string_.h"
+#include "magick/module.h"
+#include "magick/transform.h"
 
 /*
   Typedef declarations.
@@ -111,7 +111,7 @@ typedef struct _DIBInfo
   Forward declarations.
 */
 static MagickBooleanType
-  WriteDIBImage(const ImageInfo *,Image *,ExceptionInfo *);
+  WriteDIBImage(const ImageInfo *,Image *);
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -175,7 +175,7 @@ static MagickBooleanType DecodeImage(Image *image,
     byte;
 
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   assert(pixels != (unsigned char *) NULL);
@@ -335,7 +335,7 @@ static size_t EncodeImage(Image *image,const size_t bytes_per_line,
     Runlength encode pixels.
   */
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   assert(pixels != (const unsigned char *) NULL);
@@ -441,19 +441,26 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
   Image
     *image;
 
+  IndexPacket
+    index;
+
+  ssize_t
+    bit,
+    y;
+
   MagickBooleanType
     status;
 
   MemoryInfo
     *pixel_info;
 
-  Quantum
-    index;
+  register IndexPacket
+    *indexes;
 
   register ssize_t
     x;
 
-  register Quantum
+  register PixelPacket
     *q;
 
   register ssize_t
@@ -467,10 +474,7 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
     length;
 
   ssize_t
-    bit,
-    count,
-    y;
-
+    count;
 
   unsigned char
     *pixels;
@@ -479,13 +483,13 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Open image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   if (image_info->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",
       image_info->filename);
   assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  image=AcquireImage(image_info,exception);
+  assert(exception->signature == MagickSignature);
+  image=AcquireImage(image_info);
   status=OpenBlob(image_info,image,ReadBinaryBlobMode,exception);
   if (status == MagickFalse)
     {
@@ -506,8 +510,6 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
   dib_info.height=ReadBlobLSBSignedLong(image);
   dib_info.planes=ReadBlobLSBShort(image);
   dib_info.bits_per_pixel=ReadBlobLSBShort(image);
-  if (dib_info.bits_per_pixel > 32)
-    ThrowReaderException(CorruptImageError,"ImproperImageHeader");
   dib_info.compression=ReadBlobLSBLong(image);
   dib_info.image_size=ReadBlobLSBLong(image);
   dib_info.x_pixels=ReadBlobLSBLong(image);
@@ -562,9 +564,8 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
   }
   image->columns=(size_t) MagickAbsoluteValue(dib_info.width);
   image->rows=(size_t) MagickAbsoluteValue(dib_info.height);
+  image->matte=dib_info.bits_per_pixel == 32 ? MagickTrue : MagickFalse;
   image->depth=8;
-  image->alpha_trait=dib_info.bits_per_pixel == 32 ? BlendPixelTrait :
-    UndefinedPixelTrait;
   if ((dib_info.number_colors > 256) || (dib_info.colors_important > 256))
     ThrowReaderException(CorruptImageError,"ImproperImageHeader");
   if ((dib_info.number_colors != 0) || (dib_info.bits_per_pixel < 16))
@@ -594,9 +595,12 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
         if ((geometry.height != 0) && (geometry.height < image->rows))
           image->rows=geometry.height;
     }
-  status=SetImageExtent(image,image->columns,image->rows,exception);
+  status=SetImageExtent(image,image->columns,image->rows);
   if (status == MagickFalse)
-    return(DestroyImageList(image));
+    {
+      InheritException(exception,&image->exception);
+      return(DestroyImageList(image));
+    }
   if (image->storage_class == PseudoClass)
     {
       size_t
@@ -609,7 +613,7 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       /*
         Read DIB raster colormap.
       */
-      if (AcquireImageColormap(image,image->colors,exception) == MagickFalse)
+      if (AcquireImageColormap(image,image->colors) == MagickFalse)
         ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
       length=(size_t) image->colors;
       dib_colormap=(unsigned char *) AcquireQuantumMemory(length,
@@ -671,8 +675,8 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
     Initialize image structure.
   */
   image->units=PixelsPerCentimeterResolution;
-  image->resolution.x=(double) dib_info.x_pixels/100.0;
-  image->resolution.y=(double) dib_info.y_pixels/100.0;
+  image->x_resolution=(double) dib_info.x_pixels/100.0;
+  image->y_resolution=(double) dib_info.y_pixels/100.0;
   /*
     Convert DIB raster image to pixel packets.
   */
@@ -687,15 +691,15 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       {
         p=pixels+(image->rows-y-1)*bytes_per_line;
         q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-        if (q == (Quantum *) NULL)
+        if (q == (PixelPacket *) NULL)
           break;
+        indexes=GetAuthenticIndexQueue(image);
         for (x=0; x < ((ssize_t) image->columns-7); x+=8)
         {
           for (bit=0; bit < 8; bit++)
           {
-            index=(Quantum) ((*p) & (0x80 >> bit) ? 0x01 : 0x00);
-            SetPixelIndex(image,index,q);
-            q+=GetPixelChannels(image);
+            index=(IndexPacket) ((*p) & (0x80 >> bit) ? 0x01 : 0x00);
+            SetPixelIndex(indexes+x+bit,index);
           }
           p++;
         }
@@ -703,9 +707,8 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
           {
             for (bit=0; bit < (ssize_t) (image->columns % 8); bit++)
             {
-              index=(Quantum) ((*p) & (0x80 >> bit) ? 0x01 : 0x00);
-              SetPixelIndex(image,index,q);
-              q+=GetPixelChannels(image);
+              index=(IndexPacket) ((*p) & (0x80 >> bit) ? 0x01 : 0x00);
+              SetPixelIndex(indexes+x+bit,index);
             }
             p++;
           }
@@ -719,7 +722,7 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
               break;
           }
       }
-      (void) SyncImage(image,exception);
+      (void) SyncImage(image);
       break;
     }
     case 4:
@@ -731,23 +734,21 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       {
         p=pixels+(image->rows-y-1)*bytes_per_line;
         q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-        if (q == (Quantum *) NULL)
+        if (q == (PixelPacket *) NULL)
           break;
+        indexes=GetAuthenticIndexQueue(image);
         for (x=0; x < ((ssize_t) image->columns-1); x+=2)
         {
-          index=ConstrainColormapIndex(image,(*p >> 4) & 0xf,exception);
-          SetPixelIndex(image,index,q);
-          q+=GetPixelChannels(image);
-          index=ConstrainColormapIndex(image,*p & 0xf,exception);
-          SetPixelIndex(image,index,q);
+          index=ConstrainColormapIndex(image,(*p >> 4) & 0xf);
+          SetPixelIndex(indexes+x,index);
+          index=ConstrainColormapIndex(image,*p & 0xf);
+          SetPixelIndex(indexes+x+1,index);
           p++;
-          q+=GetPixelChannels(image);
         }
         if ((image->columns % 2) != 0)
           {
-            index=ConstrainColormapIndex(image,(*p >> 4) & 0xf,exception);
-            SetPixelIndex(image,index,q);
-            q+=GetPixelChannels(image);
+            index=ConstrainColormapIndex(image,(*p >> 4) & 0xf);
+            SetPixelIndex(indexes+x,index);
             p++;
           }
         if (SyncAuthenticPixels(image,exception) == MagickFalse)
@@ -760,7 +761,7 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
               break;
           }
       }
-      (void) SyncImage(image,exception);
+      (void) SyncImage(image);
       break;
     }
     case 8:
@@ -775,14 +776,15 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       {
         p=pixels+(image->rows-y-1)*bytes_per_line;
         q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-        if (q == (Quantum *) NULL)
+        if (q == (PixelPacket *) NULL)
           break;
+        indexes=GetAuthenticIndexQueue(image);
         for (x=0; x < (ssize_t) image->columns; x++)
         {
-          index=ConstrainColormapIndex(image,*p,exception);
-          SetPixelIndex(image,index,q);
+          index=ConstrainColormapIndex(image,*p);
+          SetPixelIndex(indexes+x,index);
           p++;
-          q+=GetPixelChannels(image);
+          q++;
         }
         if (SyncAuthenticPixels(image,exception) == MagickFalse)
           break;
@@ -794,7 +796,7 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
               break;
           }
       }
-      (void) SyncImage(image,exception);
+      (void) SyncImage(image);
       break;
     }
     case 16:
@@ -812,7 +814,7 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       {
         p=pixels+(image->rows-y-1)*bytes_per_line;
         q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-        if (q == (Quantum *) NULL)
+        if (q == (PixelPacket *) NULL)
           break;
         for (x=0; x < (ssize_t) image->columns; x++)
         {
@@ -820,23 +822,23 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
           word|=(*p++ << 8);
           if (dib_info.red_mask == 0)
             {
-              SetPixelRed(image,ScaleCharToQuantum(ScaleColor5to8(
-                (unsigned char) ((word >> 10) & 0x1f))),q);
-              SetPixelGreen(image,ScaleCharToQuantum(ScaleColor5to8(
-                (unsigned char) ((word >> 5) & 0x1f))),q);
-              SetPixelBlue(image,ScaleCharToQuantum(ScaleColor5to8(
-                (unsigned char) (word & 0x1f))),q);
+              SetPixelRed(q,ScaleCharToQuantum(ScaleColor5to8(
+                (unsigned char) ((word >> 10) & 0x1f))));
+              SetPixelGreen(q,ScaleCharToQuantum(ScaleColor5to8(
+                (unsigned char) ((word >> 5) & 0x1f))));
+              SetPixelBlue(q,ScaleCharToQuantum(ScaleColor5to8(
+                (unsigned char) (word & 0x1f))));
             }
           else
             {
-              SetPixelRed(image,ScaleCharToQuantum(ScaleColor5to8(
-                (unsigned char) ((word >> 11) & 0x1f))),q);
-              SetPixelGreen(image,ScaleCharToQuantum(ScaleColor6to8(
-                (unsigned char) ((word >> 5) & 0x3f))),q);
-              SetPixelBlue(image,ScaleCharToQuantum(ScaleColor5to8(
-                (unsigned char) (word & 0x1f))),q);
+              SetPixelRed(q,ScaleCharToQuantum(ScaleColor5to8(
+                (unsigned char) ((word >> 11) & 0x1f))));
+              SetPixelGreen(q,ScaleCharToQuantum(ScaleColor6to8(
+                (unsigned char) ((word >> 5) & 0x3f))));
+              SetPixelBlue(q,ScaleCharToQuantum(ScaleColor5to8(
+                (unsigned char) (word & 0x1f))));
             }
-          q+=GetPixelChannels(image);
+          q++;
         }
         if (SyncAuthenticPixels(image,exception) == MagickFalse)
           break;
@@ -860,16 +862,16 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       {
         p=pixels+(image->rows-y-1)*bytes_per_line;
         q=QueueAuthenticPixels(image,0,y,image->columns,1,exception);
-        if (q == (Quantum *) NULL)
+        if (q == (PixelPacket *) NULL)
           break;
         for (x=0; x < (ssize_t) image->columns; x++)
         {
-          SetPixelBlue(image,ScaleCharToQuantum(*p++),q);
-          SetPixelGreen(image,ScaleCharToQuantum(*p++),q);
-          SetPixelRed(image,ScaleCharToQuantum(*p++),q);
-          if (image->alpha_trait != UndefinedPixelTrait)
-            SetPixelAlpha(image,ScaleCharToQuantum(*p++),q);
-          q+=GetPixelChannels(image);
+          SetPixelBlue(q,ScaleCharToQuantum(*p++));
+          SetPixelGreen(q,ScaleCharToQuantum(*p++));
+          SetPixelRed(q,ScaleCharToQuantum(*p++));
+          if (image->matte != MagickFalse)
+            SetPixelOpacity(q,ScaleCharToQuantum(*p++));
+          q++;
         }
         if (SyncAuthenticPixels(image,exception) == MagickFalse)
           break;
@@ -884,8 +886,10 @@ static Image *ReadDIBImage(const ImageInfo *image_info,ExceptionInfo *exception)
       break;
     }
     default:
+    {
       pixel_info=RelinquishVirtualMemory(pixel_info);
       ThrowReaderException(CorruptImageError,"ImproperImageHeader");
+    }
   }
   pixel_info=RelinquishVirtualMemory(pixel_info);
   if (EOFBlob(image) != MagickFalse)
@@ -939,13 +943,15 @@ ModuleExport size_t RegisterDIBImage(void)
   MagickInfo
     *entry;
 
-  entry=AcquireMagickInfo("DIB","DIB",
-    "Microsoft Windows 3.X Packed Device-Independent Bitmap");
+  entry=SetMagickInfo("DIB");
   entry->decoder=(DecodeImageHandler *) ReadDIBImage;
   entry->encoder=(EncodeImageHandler *) WriteDIBImage;
   entry->magick=(IsImageFormatHandler *) IsDIB;
-  entry->flags^=CoderAdjoinFlag;
-  entry->flags|=CoderStealthFlag;
+  entry->adjoin=MagickFalse;
+  entry->stealth=MagickTrue;
+  entry->description=ConstantString(
+    "Microsoft Windows 3.X Packed Device-Independent Bitmap");
+  entry->module=ConstantString("DIB");
   (void) RegisterMagickInfo(entry);
   return(MagickImageCoderSignature);
 }
@@ -990,8 +996,7 @@ ModuleExport void UnregisterDIBImage(void)
 %
 %  The format of the WriteDIBImage method is:
 %
-%      MagickBooleanType WriteDIBImage(const ImageInfo *image_info,
-%        Image *image,ExceptionInfo *exception)
+%      MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image)
 %
 %  A description of each parameter follows.
 %
@@ -999,11 +1004,8 @@ ModuleExport void UnregisterDIBImage(void)
 %
 %    o image:  The image.
 %
-%    o exception: return any errors or warnings in this structure.
-%
 */
-static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
-  ExceptionInfo *exception)
+static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image)
 {
   DIBInfo
     dib_info;
@@ -1011,7 +1013,10 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
   MagickBooleanType
     status;
 
-  register const Quantum
+  register const IndexPacket
+    *indexes;
+
+  register const PixelPacket
     *p;
 
   register ssize_t
@@ -1035,27 +1040,25 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
     Open output image file.
   */
   assert(image_info != (const ImageInfo *) NULL);
-  assert(image_info->signature == MagickCoreSignature);
+  assert(image_info->signature == MagickSignature);
   assert(image != (Image *) NULL);
-  assert(image->signature == MagickCoreSignature);
+  assert(image->signature == MagickSignature);
   if (image->debug != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
-  assert(exception != (ExceptionInfo *) NULL);
-  assert(exception->signature == MagickCoreSignature);
-  status=OpenBlob(image_info,image,WriteBinaryBlobMode,exception);
+  status=OpenBlob(image_info,image,WriteBinaryBlobMode,&image->exception);
   if (status == MagickFalse)
     return(status);
   /*
     Initialize DIB raster file header.
   */
-  (void) TransformImageColorspace(image,sRGBColorspace,exception);
+  (void) TransformImageColorspace(image,sRGBColorspace);
   if (image->storage_class == DirectClass)
     {
       /*
         Full color DIB raster.
       */
       dib_info.number_colors=0;
-      dib_info.bits_per_pixel=(unsigned short) (image->alpha_trait ? 32 : 24);
+      dib_info.bits_per_pixel=(unsigned short) (image->matte ? 32 : 24);
     }
   else
     {
@@ -1065,7 +1068,7 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
       dib_info.bits_per_pixel=8;
       if (image_info->depth > 8)
         dib_info.bits_per_pixel=16;
-      if (SetImageMonochrome(image,exception) != MagickFalse)
+      if (SetImageMonochrome(image,&image->exception) != MagickFalse)
         dib_info.bits_per_pixel=1;
       dib_info.number_colors=(dib_info.bits_per_pixel == 16) ? 0 :
         (1UL << dib_info.bits_per_pixel);
@@ -1085,14 +1088,14 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
     case UndefinedResolution:
     case PixelsPerInchResolution:
     {
-      dib_info.x_pixels=(size_t) (100.0*image->resolution.x/2.54);
-      dib_info.y_pixels=(size_t) (100.0*image->resolution.y/2.54);
+      dib_info.x_pixels=(size_t) (100.0*image->x_resolution/2.54);
+      dib_info.y_pixels=(size_t) (100.0*image->y_resolution/2.54);
       break;
     }
     case PixelsPerCentimeterResolution:
     {
-      dib_info.x_pixels=(size_t) (100.0*image->resolution.x);
-      dib_info.y_pixels=(size_t) (100.0*image->resolution.y);
+      dib_info.x_pixels=(size_t) (100.0*image->x_resolution);
+      dib_info.y_pixels=(size_t) (100.0*image->y_resolution);
       break;
     }
   }
@@ -1118,16 +1121,17 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
       */
       for (y=0; y < (ssize_t) image->rows; y++)
       {
-        p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-        if (p == (const Quantum *) NULL)
+        p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+        if (p == (const PixelPacket *) NULL)
           break;
+        indexes=GetVirtualIndexQueue(image);
         q=pixels+(image->rows-y-1)*bytes_per_line;
         bit=0;
         byte=0;
         for (x=0; x < (ssize_t) image->columns; x++)
         {
           byte<<=1;
-          byte|=GetPixelIndex(image,p) != 0 ? 0x01 : 0x00;
+          byte|=GetPixelIndex(indexes+x) != 0 ? 0x01 : 0x00;
           bit++;
           if (bit == 8)
             {
@@ -1135,7 +1139,7 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
               bit=0;
               byte=0;
             }
-           p+=GetPixelChannels(image);
+           p++;
          }
          if (bit != 0)
            {
@@ -1158,15 +1162,13 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
       */
       for (y=0; y < (ssize_t) image->rows; y++)
       {
-        p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-        if (p == (const Quantum *) NULL)
+        p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+        if (p == (const PixelPacket *) NULL)
           break;
+        indexes=GetVirtualIndexQueue(image);
         q=pixels+(image->rows-y-1)*bytes_per_line;
         for (x=0; x < (ssize_t) image->columns; x++)
-        {
-          *q++=(unsigned char) GetPixelIndex(image,p);
-          p+=GetPixelChannels(image);
-        }
+          *q++=(unsigned char) GetPixelIndex(indexes+x);
         for ( ; x < (ssize_t) bytes_per_line; x++)
           *q++=0x00;
         status=SetImageProgress(image,SaveImageTag,(MagickOffsetType) y,
@@ -1185,20 +1187,21 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
       */
       for (y=0; y < (ssize_t) image->rows; y++)
       {
-        p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-        if (p == (const Quantum *) NULL)
+        p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+        if (p == (const PixelPacket *) NULL)
           break;
         q=pixels+(image->rows-y-1)*bytes_per_line;
         for (x=0; x < (ssize_t) image->columns; x++)
         {
           word=(unsigned short) ((ScaleColor8to5((unsigned char)
-            ScaleQuantumToChar(GetPixelRed(image,p))) << 11) | (ScaleColor8to6(
-            (unsigned char) ScaleQuantumToChar(GetPixelGreen(image,p))) << 5) |
-            (ScaleColor8to5((unsigned char) ScaleQuantumToChar((unsigned char)
-            GetPixelBlue(image,p)) << 0)));
+            ScaleQuantumToChar(GetPixelRed(p))) << 11) |
+            (ScaleColor8to6((unsigned char) ScaleQuantumToChar(
+            GetPixelGreen(p))) << 5) | (ScaleColor8to5((unsigned char)
+            ScaleQuantumToChar((unsigned char) GetPixelBlue(p)) <<
+            0)));
           *q++=(unsigned char)(word & 0xff);
           *q++=(unsigned char)(word >> 8);
-          p+=GetPixelChannels(image);
+          p++;
         }
         for (x=(ssize_t) (2*image->columns); x < (ssize_t) bytes_per_line; x++)
           *q++=0x00;
@@ -1217,18 +1220,18 @@ static MagickBooleanType WriteDIBImage(const ImageInfo *image_info,Image *image,
       */
       for (y=0; y < (ssize_t) image->rows; y++)
       {
-        p=GetVirtualPixels(image,0,y,image->columns,1,exception);
-        if (p == (const Quantum *) NULL)
+        p=GetVirtualPixels(image,0,y,image->columns,1,&image->exception);
+        if (p == (const PixelPacket *) NULL)
           break;
         q=pixels+(image->rows-y-1)*bytes_per_line;
         for (x=0; x < (ssize_t) image->columns; x++)
         {
-          *q++=ScaleQuantumToChar(GetPixelBlue(image,p));
-          *q++=ScaleQuantumToChar(GetPixelGreen(image,p));
-          *q++=ScaleQuantumToChar(GetPixelRed(image,p));
-          if (image->alpha_trait != UndefinedPixelTrait)
-            *q++=ScaleQuantumToChar(GetPixelAlpha(image,p));
-          p+=GetPixelChannels(image);
+          *q++=ScaleQuantumToChar(GetPixelBlue(p));
+          *q++=ScaleQuantumToChar(GetPixelGreen(p));
+          *q++=ScaleQuantumToChar(GetPixelRed(p));
+          if (image->matte != MagickFalse)
+            *q++=ScaleQuantumToChar(GetPixelOpacity(p));
+          p++;
         }
         if (dib_info.bits_per_pixel == 24)
           for (x=(ssize_t) (3*image->columns); x < (ssize_t) bytes_per_line; x++)
